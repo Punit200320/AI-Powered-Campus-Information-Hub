@@ -13,7 +13,20 @@ yarn-debug.log*
 
 # Environment files
 .env
+*.env
 *.env.local
+
+# Python & Virtualenv
+__pycache__/
+*.pyc
+.venv/
+venv/
+.scrapy/
+
+# Google Secrets & Credentials
+config/credentials.json
+credentials.json
+*.key.json
 
 # OS files
 .DS_Store
