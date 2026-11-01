@@ -2,7 +2,7 @@ import os
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-CREDENTIALS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "config", "credentials.json")
+CREDENTIALS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "config", "credentials.json")
 
 FOLDER_IDS = {
     "PYQ": "1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x",

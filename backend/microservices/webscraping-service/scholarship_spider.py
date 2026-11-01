@@ -4,7 +4,7 @@ import gspread
 import scrapy
 from scrapy.crawler import CrawlerProcess
 
-CREDENTIALS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "config", "credentials.json")
+CREDENTIALS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "config", "credentials.json")
 
 
 class GoogleSheetPipeline:
