@@ -84,3 +84,4 @@ public class Resource {
     public String getVectorId() { return vectorId; }
     public void setVectorId(String vectorId) { this.vectorId = vectorId; }
 }
+

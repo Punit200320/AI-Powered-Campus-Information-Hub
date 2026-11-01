@@ -9,3 +9,4 @@ public class CampusAiApplication {
         SpringApplication.run(CampusAiApplication.class, args);
     }
 }
+

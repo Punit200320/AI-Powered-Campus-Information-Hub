@@ -35,3 +35,4 @@ INSERT INTO resources (id, title, description, category, department, semester, s
 ('doc_adm_103', 'Robotics & Mechatronics End-Semester Syllabus 2026', 'Detailed syllabus for robotics covering kinematics, dynamics, sensor integration, and ROS programming.', 'Lecture Notes', 'Mechanical', 'Semester 6', 'Robotics', 'PDF', '4.5 MB', 32, 0, 0.0, false, NULL, NULL, NULL, NULL, 'Pending Verification', 114, 'Prof. Ananya Sen', '2 days ago', 'qdrant_col_mech_103'),
 
 ('doc_adm_104', 'Cybersecurity & Ethical Hacking Hands-on Guide', 'Practical guide covering penetration testing, network scanning, vulnerability assessment, and secure coding practices.', 'Lab Manuals', 'Information Technology', 'Semester 7', 'Cybersecurity', 'PDF', '12.8 MB', 88, 0, 0.0, false, NULL, NULL, NULL, NULL, 'Indexed', 320, 'Dr. Evelyn Reed', '3 days ago', 'qdrant_col_it_104');
+

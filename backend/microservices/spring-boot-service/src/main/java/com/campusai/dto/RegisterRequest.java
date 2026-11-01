@@ -23,3 +23,4 @@ public class RegisterRequest {
     public String getSemester() { return semester; }
     public void setSemester(String semester) { this.semester = semester; }
 }
+

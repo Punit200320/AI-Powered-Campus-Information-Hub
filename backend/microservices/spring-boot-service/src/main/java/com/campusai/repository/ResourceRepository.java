@@ -28,3 +28,4 @@ public interface ResourceRepository extends JpaRepository<Resource, String> {
     @Query("SELECT r FROM Resource r WHERE r.status IS NOT NULL ORDER BY r.uploadDate DESC")
     List<Resource> findDocumentsQueue();
 }
+

@@ -27,6 +27,7 @@ public class User {
     private String studentId;
     private String designation;
     private String avatar;
+    private String authProvider = "LOCAL"; // LOCAL, GOOGLE
 
     public User() {}
 
@@ -58,4 +59,8 @@ public class User {
     public void setDesignation(String designation) { this.designation = designation; }
     public String getAvatar() { return avatar; }
     public void setAvatar(String avatar) { this.avatar = avatar; }
+
+    public String getAuthProvider() { return authProvider; }
+    public void setAuthProvider(String authProvider) { this.authProvider = authProvider; }
 }
+
