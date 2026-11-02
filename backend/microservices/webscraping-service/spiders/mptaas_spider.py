@@ -95,3 +95,4 @@ class MptaasSpider(scrapy.Spider):
 
         for s in core_schemes:
             yield s
+

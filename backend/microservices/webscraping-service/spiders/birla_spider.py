@@ -57,3 +57,4 @@ class BirlaSpider(scrapy.Spider):
 
         for s in schemes:
             yield s
+

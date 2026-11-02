@@ -57,3 +57,4 @@ class NationalScholarshipSpider(scrapy.Spider):
 
         for s in schemes:
             yield s
+

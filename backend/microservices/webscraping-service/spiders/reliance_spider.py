@@ -50,3 +50,4 @@ class RelianceSpider(scrapy.Spider):
 
         for s in schemes:
             yield s
+

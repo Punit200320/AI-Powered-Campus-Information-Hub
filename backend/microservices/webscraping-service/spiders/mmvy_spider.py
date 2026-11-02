@@ -78,3 +78,4 @@ class MmvySpider(scrapy.Spider):
 
         for s in schemes:
             yield s
+
