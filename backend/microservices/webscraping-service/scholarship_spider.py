@@ -1,52 +1,54 @@
-import re
+"""
+Scholarship Spider Engine — AI-Powered Campus Information Hub
+=============================================================
+Multi-source crawler for Indian & Global scholarship programs:
+- MPTAAS (MP Tribal Affairs & Welfare Schemes)
+- MMVY (Mukhyamantri Medhavi Vidyarthi Yojana)
+- Reliance Foundation Undergraduate & Postgraduate Scholarships
+- Tata Trusts & Tata Capital Pankh Scholarships
+- Aditya Birla Capital & Birla Education Scholarships
+- National (NSP, AICTE, HDFC, ONGC)
+- Global Fellowships (OpportunityDesk)
+"""
+
+import sys
 import os
-import gspread
+import argparse
+
+# Windows terminal UTF-8 encoding fix
+if sys.stdout.encoding != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+
+# Ensure local service packages can be found
+sys.path.insert(0, os.path.dirname(__file__))
+
 import scrapy
 from scrapy.crawler import CrawlerProcess
-
-CREDENTIALS_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "config", "credentials.json")
-
-
-class GoogleSheetPipeline:
-    def open_spider(self, spider):
-        print("\nConnecting to Google Sheets (Scholarships_DB)...")
-        self.gc = gspread.service_account(filename=CREDENTIALS_PATH)
-        self.sheet = self.gc.open("Scholarships_DB").sheet1
-        print("Connected to Google Sheets!\n")
-
-    def process_item(self, item, spider):
-        row = [
-            item.get("title", ""),
-            item.get("provider", ""),
-            item.get("amount", ""),
-            item.get("deadline", ""),
-            item.get("eligibility", ""),
-            item.get("link", ""),
-        ]
-        try:
-            self.sheet.append_row(row)
-            print(f"Saved: {item.get('title')[:45]}...")
-        except Exception as e:
-            print(f"Error saving row: {e}")
-        return item
+from spiders.mptaas_spider import MptaasSpider
+from spiders.mmvy_spider import MmvySpider
+from spiders.reliance_spider import RelianceSpider
+from spiders.tata_spider import TataSpider
+from spiders.birla_spider import BirlaSpider
+from spiders.national_spider import NationalScholarshipSpider
 
 
-class LiveScholarshipSpider(scrapy.Spider):
-    name = "live_scholarships"
+class GlobalScholarshipSpider(scrapy.Spider):
+    """Spider for curated international fellowships & scholarships"""
+    name = "global"
+    allowed_domains = ["opportunitydesk.org"]
     start_urls = ["https://opportunitydesk.org/category/fellowships-and-scholarships/"]
 
     custom_settings = {
         "ITEM_PIPELINES": {
-            "__main__.GoogleSheetPipeline": 300,
+            "pipelines.GoogleSheetPipeline": 300,
         },
         "LOG_LEVEL": "INFO",
-        "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     }
 
     def parse(self, response):
         articles = response.css("article.l-post")
         count = 0
-
         for article in articles:
             title = article.css("h2.is-title a::text").get("").strip()
             link = article.css("h2.is-title a::attr(href)").get("").strip()
@@ -56,27 +58,69 @@ class LiveScholarshipSpider(scrapy.Spider):
             if not title or "Blog" in cat or "Tips" in title:
                 continue
 
-            deadline_match = re.search(r"Deadline:\s*([A-Za-z]+ \d{1,2}, \d{4}|\w+)", excerpt)
-            deadline = deadline_match.group(1) if deadline_match else "Check website"
-            amount = "Fully-funded" if "fully-funded" in title.lower() or "fully funded" in excerpt.lower() else "Tuition / Grant"
+            amount = "Fully-funded" if "fully-funded" in title.lower() or "fully funded" in excerpt.lower() else "Tuition Grant"
             eligibility = excerpt[:120] + "..." if len(excerpt) > 120 else excerpt
 
             yield {
                 "title": title,
-                "provider": f"Global Partner ({cat})",
+                "provider": f"International Fellowships ({cat})",
                 "amount": amount,
-                "deadline": deadline,
+                "deadline": "Check portal",
                 "eligibility": eligibility,
                 "link": link,
             }
-
             count += 1
-            if count >= 10:
+            if count >= 6:
                 break
 
 
-if __name__ == "__main__":
-    process = CrawlerProcess()
-    process.crawl(LiveScholarshipSpider)
-    process.start()
+ALL_SPIDERS = {
+    "mptaas": MptaasSpider,
+    "mmvy": MmvySpider,
+    "reliance": RelianceSpider,
+    "tata": TataSpider,
+    "birla": BirlaSpider,
+    "national": NationalScholarshipSpider,
+    "global": GlobalScholarshipSpider,
+}
 
+
+def run_crawlers(selected_spiders=None):
+    process = CrawlerProcess({
+        "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "LOG_LEVEL": "INFO",
+        "ROBOTSTXT_OBEY": False,
+    })
+
+    if not selected_spiders:
+        spiders_to_run = list(ALL_SPIDERS.values())
+        print(f"\n[Scraper Runner] Launching ALL {len(spiders_to_run)} scholarship spiders...")
+    else:
+        spiders_to_run = [
+            ALL_SPIDERS[name.lower()]
+            for name in selected_spiders
+            if name.lower() in ALL_SPIDERS
+        ]
+        print(f"\n[Scraper Runner] Launching selected spiders: {selected_spiders}...")
+
+    for spider_cls in spiders_to_run:
+        process.crawl(spider_cls)
+
+    process.start()
+    print("\n[Scraper Runner] All scholarship spiders finished crawling!")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Campus AI Scholarship Crawler")
+    parser.add_argument(
+        "--spider",
+        choices=list(ALL_SPIDERS.keys()) + ["all"],
+        default="all",
+        help="Specify which spider to run (default: all)",
+    )
+    args = parser.parse_args()
+
+    if args.spider == "all":
+        run_crawlers()
+    else:
+        run_crawlers([args.spider])
