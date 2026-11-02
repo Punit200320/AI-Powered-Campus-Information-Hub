@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import authService from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -52,6 +51,7 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!user);
+  const [token, setToken] = useState(() => localStorage.getItem('campusai_token'));
 
   useEffect(() => {
     if (user) {
@@ -64,34 +64,21 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   const login = async (email, password, role = 'student') => {
-    const res = await authService.login(email, password, role);
-    const activeUser = res?.user || DEMO_USERS[role] || {
+    // Simulated JWT Auth login
+    await new Promise((res) => setTimeout(res, 500));
+    const matchedUser = DEMO_USERS[role] || {
       ...DEMO_USERS.student,
       email,
       name: email.split('@')[0],
       role,
     };
-    setUser(activeUser);
-    return activeUser;
-  };
-
-  const loginWithGoogleOAuth2 = async (oauthParams = {}) => {
-    const res = await authService.loginWithGoogleOAuth2(oauthParams);
-    const activeUser = res?.user || {
-      id: `usr_google_${Date.now()}`,
-      name: oauthParams.name || 'Google Scholar',
-      email: oauthParams.email || 'google.scholar@campus.edu',
-      role: oauthParams.role || 'student',
-      department: 'Computer Science & Engineering',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    };
-    setUser(activeUser);
-    return activeUser;
+    setUser(matchedUser);
+    return matchedUser;
   };
 
   const register = async (userData) => {
-    const res = await authService.register(userData);
-    const activeUser = res?.user || {
+    await new Promise((res) => setTimeout(res, 600));
+    const newUser = {
       id: `usr_${Date.now()}`,
       name: userData.name,
       email: userData.email,
@@ -100,13 +87,22 @@ export const AuthProvider = ({ children }) => {
       semester: userData.semester || '1st Semester',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
     };
-    setUser(activeUser);
-    return activeUser;
+    setUser(newUser);
+    return newUser;
   };
 
   const logout = () => {
-    authService.logout();
     setUser(null);
+    setToken(null);
+    localStorage.removeItem('campusai_token');
+  };
+
+  const ssoLogin = (ssoUser, jwt) => {
+    if (jwt) {
+      setToken(jwt);
+      localStorage.setItem('campusai_token', jwt);
+    }
+    setUser(ssoUser);
   };
 
   const switchRole = (newRole) => {
@@ -120,11 +116,12 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         isAuthenticated,
+        token,
         login,
-        loginWithGoogleOAuth2,
         register,
         logout,
         switchRole,
+        ssoLogin,
         isStudent: user?.role === 'student',
         isFaculty: user?.role === 'faculty',
         isAdmin: user?.role === 'admin',

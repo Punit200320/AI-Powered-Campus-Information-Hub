@@ -21,11 +21,12 @@ try:
 except Exception:
     pass
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import requests as http_requests
 from dotenv import load_dotenv
+from auth import get_current_user
 
 load_dotenv()
 
@@ -284,7 +285,7 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
 # ---------------------------------------------------------------------------
 
 @app.post("/api/v1/chat/generate", response_model=ChatResponse)
-async def chat_generate(req: ChatRequest):
+async def chat_generate(req: ChatRequest, user: dict = Depends(get_current_user)):
     """RAG-powered chat endpoint using scholarship data as context."""
     try:
         # Build RAG context from Google Sheets scholarship data
@@ -414,7 +415,7 @@ HARDCODED_QUIZ_QUESTIONS = [
 
 
 @app.post("/api/v1/quiz/generate", response_model=QuizResponse)
-async def quiz_generate(req: QuizRequest):
+async def quiz_generate(req: QuizRequest, user: dict = Depends(get_current_user)):
     """Generate quiz questions using AI, with hardcoded fallback."""
     quiz_id = str(uuid.uuid4())
     count = max(1, min(req.count, 20))
@@ -480,7 +481,7 @@ async def quiz_generate(req: QuizRequest):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/v1/summarize/upload", response_model=SummarizeResponse)
-async def summarize_upload(file: UploadFile = File(...)):
+async def summarize_upload(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     """Summarise an uploaded PDF or text document."""
     try:
         file_bytes = await file.read()
@@ -579,7 +580,7 @@ async def summarize_upload(file: UploadFile = File(...)):
 # ---------------------------------------------------------------------------
 
 @app.get("/api/v1/scholarships", response_model=ScholarshipsResponse)
-async def list_scholarships():
+async def list_scholarships(user: dict = Depends(get_current_user)):
     """Return all scholarship records from Google Sheets."""
     try:
         data = _load_scholarship_data()
