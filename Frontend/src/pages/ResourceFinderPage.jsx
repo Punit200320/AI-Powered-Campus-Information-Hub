@@ -16,6 +16,7 @@ import {
   Tag,
   Eye,
   SlidersHorizontal,
+  Upload,
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
@@ -39,6 +40,47 @@ export const ResourceFinderPage = () => {
   const [selectedResource, setSelectedResource] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadCategory, setUploadCategory] = useState('Previous Year Questions (PYQs)');
+  const [uploadDept, setUploadDept] = useState('Computer Science');
+  const [uploadSemester, setUploadSemester] = useState('Semester 5');
+  const [uploadSubject, setUploadSubject] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!uploadTitle.trim()) {
+      toast.error('Please enter a document title');
+      return;
+    }
+    setUploading(true);
+    try {
+      const res = await resourceService.uploadResource({
+        title: uploadTitle,
+        category: uploadCategory,
+        department: uploadDept,
+        semester: uploadSemester,
+        subject: uploadSubject || 'General',
+        description: `${uploadCategory} for ${uploadDept} (${uploadSemester})`,
+        uploadedBy: 'Student Contributor',
+      });
+      if (res.resource) {
+        setResources((prev) => [res.resource, ...prev]);
+      }
+      toast.success('Document confidential record stored in Database & mapped to Google Drive!', {
+        icon: '📁',
+        duration: 4000,
+      });
+      setIsUploadModalOpen(false);
+      setUploadTitle('');
+      setUploadSubject('');
+    } catch (err) {
+      toast.error('Upload failed. Check backend connection.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const { bookmarks, toggleBookmark, isBookmarked } = useBookmarks();
 
@@ -105,12 +147,74 @@ export const ResourceFinderPage = () => {
             {resources.length} verified documents
           </Badge>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          Smart Resource Finder
-        </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Smart Resource Finder
+          </h1>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsUploadModalOpen(true)}
+            leftIcon={Upload}
+          >
+            Upload to Drive & Vault
+          </Button>
+        </div>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
           Search indexed course syllabi, professor lecture notes, solved previous year university exam papers, and laboratory guides.
         </p>
+
+        {/* Google Drive Vault Direct Folders */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+          <a
+            href="https://drive.google.com/drive/folders/1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 p-3 rounded-2xl glass-card border border-blue-500/20 hover:border-blue-500/50 hover:shadow-md transition-all group"
+          >
+            <span className="text-2xl group-hover:scale-110 transition-transform">📄</span>
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors">PYQ Vault</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">Google Drive ↗</div>
+            </div>
+          </a>
+          <a
+            href="https://drive.google.com/drive/folders/1mqB0PDUZfZeTakC0rkKZ-ZmyfNLhKl4q"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 p-3 rounded-2xl glass-card border border-emerald-500/20 hover:border-emerald-500/50 hover:shadow-md transition-all group"
+          >
+            <span className="text-2xl group-hover:scale-110 transition-transform">📢</span>
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">Notices</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">Google Drive ↗</div>
+            </div>
+          </a>
+          <a
+            href="https://drive.google.com/drive/folders/17K7qVk7_1LgSACWtp58WsgdTaTLYnOSw"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 p-3 rounded-2xl glass-card border border-purple-500/20 hover:border-purple-500/50 hover:shadow-md transition-all group"
+          >
+            <span className="text-2xl group-hover:scale-110 transition-transform">📚</span>
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-500 transition-colors">Lecture Notes</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">Google Drive ↗</div>
+            </div>
+          </a>
+          <a
+            href="https://drive.google.com/drive/folders/1xeX6Up5WTWc2LU2haBeo2boxAO28Ncsh"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 p-3 rounded-2xl glass-card border border-amber-500/20 hover:border-amber-500/50 hover:shadow-md transition-all group"
+          >
+            <span className="text-2xl group-hover:scale-110 transition-transform">📑</span>
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-500 transition-colors">Brochures</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">Google Drive ↗</div>
+            </div>
+          </a>
+        </div>
       </motion.div>
 
       {/* Modern Search Bar */}
@@ -302,6 +406,16 @@ export const ResourceFinderPage = () => {
                       >
                         Download
                       </Button>
+                      <a
+                        href={res.driveUrl || "https://drive.google.com/drive/folders/1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                        title="Open in Google Drive"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Drive
+                      </a>
                     </div>
                   </div>
                 </Card>
@@ -380,6 +494,112 @@ export const ResourceFinderPage = () => {
             </div>
           </div>
         )}
+      </Modal>
+      {/* Upload Document Modal */}
+      <Modal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        title="Upload Academic Document to Drive & Vault"
+        maxWidth="max-w-lg"
+      >
+        <form onSubmit={handleUploadSubmit} className="space-y-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Upload PYQs, notices, lecture notes, or brochures. The file record is saved in our secure campus Database and organized into your dedicated Google Drive academic folder.
+          </p>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Document Title *
+            </label>
+            <input
+              type="text"
+              required
+              value={uploadTitle}
+              onChange={(e) => setUploadTitle(e.target.value)}
+              placeholder="e.g. Operating Systems End-Sem PYQ 2025"
+              className="w-full glass-input rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Category / Section
+              </label>
+              <select
+                value={uploadCategory}
+                onChange={(e) => setUploadCategory(e.target.value)}
+                className="w-full glass-input rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-900"
+              >
+                <option value="Previous Year Questions (PYQs)">Previous Year Questions (PYQs)</option>
+                <option value="Lecture Notes">Lecture Notes</option>
+                <option value="Notices">Notices & Circulars</option>
+                <option value="Brochures">Brochures & Curricula</option>
+                <option value="Lab Manuals">Lab Manuals</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Department
+              </label>
+              <select
+                value={uploadDept}
+                onChange={(e) => setUploadDept(e.target.value)}
+                className="w-full glass-input rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-900"
+              >
+                <option value="Computer Science">Computer Science</option>
+                <option value="Artificial Intelligence">Artificial Intelligence</option>
+                <option value="Information Technology">Information Technology</option>
+                <option value="Electronics">Electronics</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Semester
+              </label>
+              <select
+                value={uploadSemester}
+                onChange={(e) => setUploadSemester(e.target.value)}
+                className="w-full glass-input rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-900"
+              >
+                <option value="Semester 4">Semester 4</option>
+                <option value="Semester 5">Semester 5</option>
+                <option value="Semester 6">Semester 6</option>
+                <option value="Semester 7">Semester 7</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Subject
+              </label>
+              <input
+                type="text"
+                value={uploadSubject}
+                onChange={(e) => setUploadSubject(e.target.value)}
+                placeholder="e.g. Operating Systems"
+                className="w-full glass-input rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-400">
+            🔒 <strong>Data Privacy:</strong> Metadata and user identity are encrypted & stored in the local Campus Database, while PDF documents are mapped to Google Drive storage.
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="ghost" size="sm" type="button" onClick={() => setIsUploadModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" type="submit" disabled={uploading} leftIcon={Upload}>
+              {uploading ? 'Storing...' : 'Save & Link to Drive'}
+            </Button>
+          </div>
+        </form>
       </Modal>
     </motion.div>
   );

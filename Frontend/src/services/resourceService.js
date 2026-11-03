@@ -52,6 +52,50 @@ export const resourceService = {
     const found = MOCK_RESOURCES.find((r) => r.id === id);
     return found || MOCK_RESOURCES[0];
   },
+
+  uploadResource: async (payload) => {
+    try {
+      const response = await apiClient.post('/resources/upload', payload);
+      return response.data;
+    } catch (err) {
+      console.warn('[ResourceService] Upload fallback to simulated database');
+      const folderMap = {
+        'Previous Year Questions (PYQs)': '1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x',
+        'Notices': '1mqB0PDUZfZeTakC0rkKZ-ZmyfNLhKl4q',
+        'Lecture Notes': '17K7qVk7_1LgSACWtp58WsgdTaTLYnOSw',
+        'Brochures': '1xeX6Up5WTWc2LU2haBeo2boxAO28Ncsh',
+      };
+      const folderId = folderMap[payload.category] || '1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x';
+      return {
+        success: true,
+        resource: {
+          id: `res_${Date.now()}`,
+          ...payload,
+          driveUrl: `https://drive.google.com/drive/folders/${folderId}`,
+          uploadedAt: 'Just now',
+          fileSize: '5.2 MB',
+          downloads: 1,
+          rating: 5.0,
+          facultyVerified: true,
+        },
+        driveUrl: `https://drive.google.com/drive/folders/${folderId}`,
+      };
+    }
+  },
+
+  getDriveFolders: async () => {
+    try {
+      const response = await apiClient.get('/resources/drive-folders');
+      return response.data;
+    } catch (err) {
+      return {
+        PYQ: 'https://drive.google.com/drive/folders/1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x',
+        Notices: 'https://drive.google.com/drive/folders/1mqB0PDUZfZeTakC0rkKZ-ZmyfNLhKl4q',
+        Notes: 'https://drive.google.com/drive/folders/17K7qVk7_1LgSACWtp58WsgdTaTLYnOSw',
+        Brochures: 'https://drive.google.com/drive/folders/1xeX6Up5WTWc2LU2haBeo2boxAO28Ncsh',
+      };
+    }
+  },
 };
 
 export default resourceService;

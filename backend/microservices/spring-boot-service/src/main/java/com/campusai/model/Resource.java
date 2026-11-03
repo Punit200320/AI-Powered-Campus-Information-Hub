@@ -36,6 +36,8 @@ public class Resource {
     private String uploadedBy;
     private String uploadDate;
     private String vectorId;
+    private String driveUrl;
+    private String driveFolderId;
 
     public Resource() {}
 
@@ -83,5 +85,9 @@ public class Resource {
     public void setUploadDate(String uploadDate) { this.uploadDate = uploadDate; }
     public String getVectorId() { return vectorId; }
     public void setVectorId(String vectorId) { this.vectorId = vectorId; }
+    public String getDriveUrl() { return driveUrl; }
+    public void setDriveUrl(String driveUrl) { this.driveUrl = driveUrl; }
+    public String getDriveFolderId() { return driveFolderId; }
+    public void setDriveFolderId(String driveFolderId) { this.driveFolderId = driveFolderId; }
 }
 
