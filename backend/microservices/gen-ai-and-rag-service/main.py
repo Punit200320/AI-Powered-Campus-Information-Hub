@@ -82,13 +82,11 @@ def _get_scholarship_deadline(s: dict) -> str:
 
 # Ordered fallback chain for free models on OpenRouter
 FALLBACK_MODELS = [
-    "nvidia/nemotron-3.5-lightning:free",
-    "liquid/lfm-2.5-2.6b:free",
     "dots-studio/dots-3-note-preview:free",
-    "xingchen-agi/xing4.0-29b-a4b:free",
-    "recursive/flint-v1.0:free",
     "cohere/north-mini-code:free",
+    "nvidia/nemotron-3.5-lightning:free",
     "thinkingmachines/inkling:free",
+    "liquid/lfm-2.5-2.6b:free",
     "openrouter/free",
 ]
 
@@ -217,15 +215,16 @@ def _call_openrouter(messages: list, *, temperature: float = 0.7, max_tokens: in
     Try each model in FALLBACK_MODELS until one succeeds.
     Returns the assistant content string or None.
     """
-    if not OPENROUTER_API_KEY:
+    api_key = os.getenv("OPENROUTER_API_KEY", "") or OPENROUTER_API_KEY
+    if not api_key:
         print("[WARN] OPENROUTER_API_KEY not set — skipping AI call")
         return None
 
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:3000",
-        "X-Title": "Campus AI",
+        "HTTP-Referer": "http://localhost:5173",
+        "X-Title": "Campus AI Assistant",
     }
 
     for model in FALLBACK_MODELS:
@@ -237,20 +236,17 @@ def _call_openrouter(messages: list, *, temperature: float = 0.7, max_tokens: in
                 "max_tokens": max_tokens,
             }
             resp = http_requests.post(
-                OPENROUTER_URL, headers=headers, json=payload, timeout=60
+                OPENROUTER_URL, headers=headers, json=payload, timeout=25
             )
             if resp.status_code == 200:
                 data = resp.json()
-                content = (
-                    data.get("choices", [{}])[0]
-                    .get("message", {})
-                    .get("content", "")
-                )
-                if content:
-                    print(f"[INFO] Model {model} responded successfully")
-                    return content
+                msg = data.get("choices", [{}])[0].get("message", {})
+                content = msg.get("content") or msg.get("reasoning") or ""
+                if content and str(content).strip():
+                    print(f"[INFO] OpenRouter Model {model} responded successfully")
+                    return str(content).strip()
             else:
-                print(f"[WARN] Model {model} returned {resp.status_code}: {resp.text[:200]}")
+                print(f"[WARN] Model {model} returned {resp.status_code}: {resp.text[:120]}")
         except Exception as exc:
             print(f"[WARN] Model {model} error: {exc}")
 

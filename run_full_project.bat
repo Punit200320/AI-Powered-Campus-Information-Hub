@@ -50,3 +50,4 @@ echo.
 echo Press any key to open the web app in your default browser...
 pause >nul
 start http://localhost:5173
+
