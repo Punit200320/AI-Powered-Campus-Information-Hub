@@ -68,9 +68,9 @@ export const ResourceFinderPage = () => {
       if (res.resource) {
         setResources((prev) => [res.resource, ...prev]);
       }
-      toast.success('Document confidential record stored in Database & mapped to Google Drive!', {
-        icon: '📁',
-        duration: 4000,
+      toast.success('Document submitted! Status: Pending Admin Approval. It will be published upon faculty review.', {
+        icon: '⏳',
+        duration: 5000,
       });
       setIsUploadModalOpen(false);
       setUploadTitle('');
@@ -117,12 +117,24 @@ export const ResourceFinderPage = () => {
 
   const handleDownload = (res) => {
     setIsDownloading(true);
-    setTimeout(() => {
-      setIsDownloading(false);
-      toast.success(`Downloaded "${res.title.slice(0, 32)}..." (${res.fileSize})`, {
+    try {
+      // Direct in-site file download without going to external Google Drive
+      const downloadUrl = `http://localhost:5000/api/resources/${res.id}/download`;
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `${res.title.replace(/[^a-zA-Z0-9.-]/g, '_')}.txt`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success(`Downloading "${res.title.slice(0, 35)}..." directly from Campus Vault!`, {
         icon: '📥',
       });
-    }, 800);
+    } catch (err) {
+      toast.error('Download error. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handlePreview = (res) => {
@@ -164,56 +176,67 @@ export const ResourceFinderPage = () => {
           Search indexed course syllabi, professor lecture notes, solved previous year university exam papers, and laboratory guides.
         </p>
 
-        {/* Google Drive Vault Direct Folders */}
+        {/* Direct In-Site Academic Categories (No external redirect) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-          <a
-            href="https://drive.google.com/drive/folders/1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2.5 p-3 rounded-2xl glass-card border border-blue-500/20 hover:border-blue-500/50 hover:shadow-md transition-all group"
+          <button
+            onClick={() => setCategory('Previous Year Questions (PYQs)')}
+            className={`flex items-center gap-2.5 p-3 rounded-2xl glass-card border text-left transition-all ${
+              category === 'Previous Year Questions (PYQs)'
+                ? 'border-blue-500 ring-2 ring-blue-500/30 bg-blue-50/50 dark:bg-blue-900/20'
+                : 'border-blue-500/20 hover:border-blue-500/50'
+            }`}
           >
-            <span className="text-2xl group-hover:scale-110 transition-transform">📄</span>
+            <span className="text-2xl">📄</span>
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors">PYQ Vault</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">Google Drive ↗</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">PYQ Archive</div>
+              <div className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">View & Download On-Site</div>
             </div>
-          </a>
-          <a
-            href="https://drive.google.com/drive/folders/1mqB0PDUZfZeTakC0rkKZ-ZmyfNLhKl4q"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2.5 p-3 rounded-2xl glass-card border border-emerald-500/20 hover:border-emerald-500/50 hover:shadow-md transition-all group"
+          </button>
+
+          <button
+            onClick={() => setCategory('Notices')}
+            className={`flex items-center gap-2.5 p-3 rounded-2xl glass-card border text-left transition-all ${
+              category === 'Notices'
+                ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-900/20'
+                : 'border-emerald-500/20 hover:border-emerald-500/50'
+            }`}
           >
-            <span className="text-2xl group-hover:scale-110 transition-transform">📢</span>
+            <span className="text-2xl">📢</span>
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">Notices</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">Google Drive ↗</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">Campus Notices</div>
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Exam & Form Circulars</div>
             </div>
-          </a>
-          <a
-            href="https://drive.google.com/drive/folders/17K7qVk7_1LgSACWtp58WsgdTaTLYnOSw"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2.5 p-3 rounded-2xl glass-card border border-purple-500/20 hover:border-purple-500/50 hover:shadow-md transition-all group"
+          </button>
+
+          <button
+            onClick={() => setCategory('Lecture Notes')}
+            className={`flex items-center gap-2.5 p-3 rounded-2xl glass-card border text-left transition-all ${
+              category === 'Lecture Notes'
+                ? 'border-purple-500 ring-2 ring-purple-500/30 bg-purple-50/50 dark:bg-purple-900/20'
+                : 'border-purple-500/20 hover:border-purple-500/50'
+            }`}
           >
-            <span className="text-2xl group-hover:scale-110 transition-transform">📚</span>
+            <span className="text-2xl">📚</span>
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-500 transition-colors">Lecture Notes</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">Google Drive ↗</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">Lecture Notes</div>
+              <div className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Verified Faculty Notes</div>
             </div>
-          </a>
-          <a
-            href="https://drive.google.com/drive/folders/1xeX6Up5WTWc2LU2haBeo2boxAO28Ncsh"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2.5 p-3 rounded-2xl glass-card border border-amber-500/20 hover:border-amber-500/50 hover:shadow-md transition-all group"
+          </button>
+
+          <button
+            onClick={() => setCategory('Brochures')}
+            className={`flex items-center gap-2.5 p-3 rounded-2xl glass-card border text-left transition-all ${
+              category === 'Brochures'
+                ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-50/50 dark:bg-amber-900/20'
+                : 'border-amber-500/20 hover:border-amber-500/50'
+            }`}
           >
-            <span className="text-2xl group-hover:scale-110 transition-transform">📑</span>
+            <span className="text-2xl">📑</span>
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-500 transition-colors">Brochures</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">Google Drive ↗</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">Brochures & Curricula</div>
+              <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Syllabus & Guidelines</div>
             </div>
-          </a>
+          </button>
         </div>
       </motion.div>
 
@@ -399,23 +422,13 @@ export const ResourceFinderPage = () => {
                         Preview
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="primary"
                         size="sm"
                         onClick={() => handleDownload(res)}
                         leftIcon={Download}
                       >
                         Download
                       </Button>
-                      <a
-                        href={res.driveUrl || "https://drive.google.com/drive/folders/1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-                        title="Open in Google Drive"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        Drive
-                      </a>
                     </div>
                   </div>
                 </Card>
@@ -588,7 +601,7 @@ export const ResourceFinderPage = () => {
           </div>
 
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-400">
-            🔒 <strong>Data Privacy:</strong> Metadata and user identity are encrypted & stored in the local Campus Database, while PDF documents are mapped to Google Drive storage.
+            🛡️ <strong>Admin Approval Workflow:</strong> Uploaded study materials and notices are sent to the review queue. Once verified by Faculty / Administrator in the Admin portal, they are automatically published for all students to view and download directly on this site.
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">
