@@ -18,6 +18,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * After a successful OAuth2 sign-in, issues the application's own JWT and
@@ -52,11 +53,30 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         }
 
         OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) authentication;
-        String email = oauth2Token.getPrincipal().getAttribute("email");
+        Map<String, Object> attrs = oauth2Token.getPrincipal().getAttributes();
+        String email = (String) attrs.get("email");
+        if (email == null || email.isBlank()) {
+            response.sendRedirect(frontendUrl + "/login?error=email_not_provided");
+            return;
+        }
+
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
-            response.sendRedirect(frontendUrl + "/login?error=oauth_user_not_found");
-            return;
+            String name = (String) attrs.getOrDefault("name", email.split("@")[0]);
+            String picture = (String) attrs.get("picture");
+            User newUser = new User(
+                name,
+                email,
+                UUID.randomUUID().toString(),
+                "student",
+                "Computer Science & Engineering"
+            );
+            newUser.setSemester("Semester 6");
+            newUser.setStudentId("2026-CS-" + (100 + (int)(Math.random() * 900)));
+            if (picture != null && !picture.isBlank()) {
+                newUser.setAvatar(picture);
+            }
+            user = userRepository.save(newUser);
         }
 
         String jwt = jwtService.generateToken(user.getEmail(), user.getRole());
