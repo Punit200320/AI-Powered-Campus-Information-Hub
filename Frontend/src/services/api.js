@@ -29,6 +29,14 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+aiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('campusai_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Global response handler with graceful fallback
 apiClient.interceptors.response.use(
   (response) => response,
@@ -36,6 +44,16 @@ apiClient.interceptors.response.use(
     // If backend is unreachable or returns 404/500, log warning and let caller fallback to demo data
     if (!error.response) {
       console.warn('[API Client] Backend server unreachable. Falling back to local simulated mock services.');
+    }
+    return Promise.reject(error);
+  }
+);
+
+aiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (!error.response) {
+      console.warn('[AI Client] AI service unreachable. Falling back to local simulated mock services.');
     }
     return Promise.reject(error);
   }
