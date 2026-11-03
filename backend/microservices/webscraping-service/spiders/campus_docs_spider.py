@@ -209,3 +209,4 @@ def sync_scraped_docs_to_backend():
 
 if __name__ == "__main__":
     sync_scraped_docs_to_backend()
+

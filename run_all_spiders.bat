@@ -48,3 +48,4 @@ echo ========================================================
 echo All Scrapers Completed! Database & Google Sheets Synced.
 echo ========================================================
 pause
+
