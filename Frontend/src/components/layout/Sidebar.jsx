@@ -15,6 +15,9 @@ import {
   Settings,
   Sparkles,
   ExternalLink,
+  Award,
+  Compass,
+  BookOpen,
 } from 'lucide-react';
 import { Tooltip } from '../common/Tooltip';
 import { Badge } from '../common/Badge';
@@ -23,6 +26,9 @@ import { cn } from '../../utils/cn';
 
 const NAV_ITEMS = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Scholarships Central', path: '/scholarships', icon: Award, badge: 'Scraped' },
+  { name: 'Counselling Portal', path: '/counselling', icon: Compass, badge: 'DTE/JoSAA' },
+  { name: 'Study Material Vault', path: '/study-material', icon: BookOpen, badge: 'PYQs' },
   { name: 'AI Campus Chat', path: '/chat', icon: MessageSquare, badge: 'AI' },
   { name: 'Smart Resource Finder', path: '/resources', icon: Search },
   { name: 'Document Summarizer', path: '/summarize', icon: FileText, badge: 'New' },

@@ -6,6 +6,9 @@ import { LoginPage } from '../pages/LoginPage';
 import { OAuthCallbackPage } from '../pages/OAuthCallbackPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { DashboardPage } from '../pages/DashboardPage';
+import { ScholarshipsHubPage } from '../pages/ScholarshipsHubPage';
+import { CounsellingHubPage } from '../pages/CounsellingHubPage';
+import { StudyMaterialHubPage } from '../pages/StudyMaterialHubPage';
 import { ChatPage } from '../pages/ChatPage';
 import { ResourceFinderPage } from '../pages/ResourceFinderPage';
 import { SummarizerPage } from '../pages/SummarizerPage';
@@ -41,6 +44,9 @@ export const AppRoutes = () => {
         {/* Authenticated Workspace Layout */}
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/scholarships" element={<ScholarshipsHubPage />} />
+          <Route path="/counselling" element={<CounsellingHubPage />} />
+          <Route path="/study-material" element={<StudyMaterialHubPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/resources" element={<ResourceFinderPage />} />
           <Route path="/summarize" element={<SummarizerPage />} />
@@ -58,4 +64,3 @@ export const AppRoutes = () => {
 };
 
 export default AppRoutes;
-

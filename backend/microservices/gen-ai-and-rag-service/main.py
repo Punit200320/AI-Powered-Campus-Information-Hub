@@ -374,16 +374,32 @@ async def chat_generate(req: ChatRequest, user: Optional[dict] = Depends(get_opt
 
         rag_context = "\n".join(context_chunks[:15])  # cap to avoid token overflow
 
-        system_prompt = (
-            "You are Campus AI, a helpful assistant for university students. "
-            "Answer questions accurately and concisely. "
-            "If scholarship data is provided below, use it to answer scholarship-related queries.\n\n"
-        )
-        if rag_context:
-            system_prompt += f"=== Scholarship Database ===\n{rag_context}\n=== End ===\n"
+        # Tailor system persona and instructions according to specialized mode
+        if req.mode == "scholarship":
+            system_prompt = (
+                "You are Campus AI's Chief Scholarship & Financial Aid Advisor. "
+                "You specialize in government scholarships (MPTAAS, MMVY, NSP) and private merit scholarships (Reliance, Tata, Birla). "
+                "Help students with eligibility criteria, family income limits, document checklists, and application deadlines.\n\n"
+            )
+        elif req.mode == "counselling":
+            system_prompt = (
+                "You are Campus AI's Senior Admissions & Counselling Strategist. "
+                "You specialize in MP DTE Centralized Counselling (B.Tech General, CLC, Lateral Entry, TFW 100% Tuition Fee Waiver Scheme) and JoSAA/CSAB (IIT/NIT/IIIT seat allotment, rounds 1-6 cutoffs, special rounds). "
+                "Provide accurate cutoffs, opening/closing ranks, choice filling strategies, and document requirements.\n\n"
+            )
+        elif req.mode == "study_material":
+            system_prompt = (
+                "You are Campus AI's Academic Professor & Exam Preparation Guide. "
+                "You assist students with university Previous Year Questions (PYQs), solving end-semester problems step-by-step, explaining concepts from lecture notes, and providing concise syllabus revision summaries.\n\n"
+            )
+        else:
+            system_prompt = (
+                "You are Campus AI, an intelligent academic copilot for university students. "
+                "Answer questions accurately, constructively, and concisely.\n\n"
+            )
 
-        if req.mode and req.mode != "general":
-            system_prompt += f"\nThe user is in '{req.mode}' mode. Tailor your response accordingly.\n"
+        if rag_context:
+            system_prompt += f"=== Verified Campus Knowledge & Portal Database ===\n{rag_context}\n=== End Database ===\n"
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -677,12 +693,35 @@ async def summarize_upload(file: UploadFile = File(...), user: Optional[dict] = 
 # 4. GET /api/v1/scholarships
 # ---------------------------------------------------------------------------
 
+def _is_counselling_record(row: dict) -> bool:
+    """Check if a record is related to Counselling / Seat Allotment."""
+    text = (str(row.get("Title", "")) + " " + str(row.get("Provider", "")) + " " + str(row.get("Eligibility", ""))).lower()
+    counsel_keywords = ["dte", "josaa", "csab", "counselling", "counseling", "seat allotment", "clc", "lateral entry", "tfw", "tuition fee waiver"]
+    return any(k in text for k in counsel_keywords)
+
+def _is_scholarship_record(row: dict) -> bool:
+    return not _is_counselling_record(row)
+
+
 @app.get("/api/v1/scholarships", response_model=ScholarshipsResponse)
 async def list_scholarships(user: Optional[dict] = Depends(get_optional_user)):
     """Return all scholarship records from Google Sheets."""
     try:
         data = _load_scholarship_data()
-        return ScholarshipsResponse(count=len(data), data=data)
+        scholarships = [r for r in data if _is_scholarship_record(r)]
+        return ScholarshipsResponse(count=len(scholarships), data=scholarships)
+    except Exception as exc:
+        traceback.print_exc()
+        return ScholarshipsResponse(count=0, data=[])
+
+
+@app.get("/api/v1/counselling", response_model=ScholarshipsResponse)
+async def list_counselling(user: Optional[dict] = Depends(get_optional_user)):
+    """Return all counselling and seat allocation records from Google Sheets."""
+    try:
+        data = _load_scholarship_data()
+        counselling_records = [r for r in data if _is_counselling_record(r)]
+        return ScholarshipsResponse(count=len(counselling_records), data=counselling_records)
     except Exception as exc:
         traceback.print_exc()
         return ScholarshipsResponse(count=0, data=[])
