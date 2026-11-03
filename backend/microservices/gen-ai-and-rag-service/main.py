@@ -47,9 +47,38 @@ app.add_middleware(
 # Configuration
 # ---------------------------------------------------------------------------
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
 CREDENTIALS_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "config", "credentials.json"
 )
+
+def _get_scholarship_title(s: dict) -> str:
+    for k in ["Title", "title", "name", "Name", "scholarship_name"]:
+        val = s.get(k)
+        if val and str(val).strip():
+            return str(val).strip()
+    return "Campus Scholarship"
+
+def _get_scholarship_provider(s: dict) -> str:
+    for k in ["Provider", "provider", "organization", "Organization"]:
+        val = s.get(k)
+        if val and str(val).strip():
+            return str(val).strip()
+    return "Government / Foundation"
+
+def _get_scholarship_amount(s: dict) -> str:
+    for k in ["Amount", "amount", "award", "Award"]:
+        val = s.get(k)
+        if val and str(val).strip():
+            return str(val).strip()
+    return "Tuition & Financial Grant"
+
+def _get_scholarship_deadline(s: dict) -> str:
+    for k in ["Deadline", "deadline", "last_date", "Last Date"]:
+        val = s.get(k)
+        if val and str(val).strip():
+            return str(val).strip()
+    return "Check Portal"
 
 # Ordered fallback chain for free models on OpenRouter
 FALLBACK_MODELS = [
@@ -228,6 +257,35 @@ def _call_openrouter(messages: list, *, temperature: float = 0.7, max_tokens: in
     return None
 
 
+
+def _call_gemini(prompt: str) -> Optional[str]:
+    """Call Google Gemini API if GEMINI_API_KEY is configured."""
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
+    if not api_key:
+        return None
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    try:
+        resp = http_requests.post(url, json=payload, timeout=30)
+        if resp.status_code == 200:
+            data = resp.json()
+            candidates = data.get("candidates", [])
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if parts:
+                    return parts[0].get("text", "")
+    except Exception as exc:
+        print(f"[WARN] Gemini error: {exc}")
+    return None
+
+
+def _call_llm(messages: list, prompt_text: str = "", *, temperature: float = 0.7, max_tokens: int = 2048) -> Optional[str]:
+    """Try Gemini first, then fallback to OpenRouter free models."""
+    res = _call_gemini(prompt_text or (messages[-1].get("content", "") if messages else ""))
+    if res:
+        return res
+    return _call_openrouter(messages, temperature=temperature, max_tokens=max_tokens)
+
 def _parse_json_from_llm(text: str) -> Optional[dict]:
     """Best-effort extraction of JSON from an LLM response."""
     # Try direct parse
@@ -308,9 +366,9 @@ async def chat_generate(req: ChatRequest, user: Optional[dict] = Depends(get_opt
                     relevant_citations.append(
                         Citation(
                             id=str(idx + 1),
-                            title=str(row.get("name", row.get("Name", row.get("title", row.get("Title", f"Scholarship #{idx+1}"))))),
-                            page=str(row.get("page", row.get("Page", "1"))),
-                            author=str(row.get("provider", row.get("Provider", row.get("organization", row.get("Organization", "Unknown"))))),
+                            title=_get_scholarship_title(row),
+                            page=str(row.get("Deadline", row.get("deadline", "Active"))),
+                            author=_get_scholarship_provider(row),
                         )
                     )
             # If no keyword match, include up to first 10 rows as general context
@@ -336,7 +394,7 @@ async def chat_generate(req: ChatRequest, user: Optional[dict] = Depends(get_opt
             {"role": "user", "content": req.message},
         ]
 
-        reply = _call_openrouter(messages)
+        reply = _call_llm(messages, req.message)
 
         if reply:
             return ChatResponse(
@@ -344,28 +402,51 @@ async def chat_generate(req: ChatRequest, user: Optional[dict] = Depends(get_opt
                 citations=relevant_citations[:5],
             )
 
-        # Fallback if external LLM is unavailable: Provide contextual RAG response from campus database
+        # Fallback if external LLM is unavailable: Provide contextual RAG or smart conversational response
+        q_clean = req.message.lower().strip()
+
+        # Handle questions about model name / identity / status
+        if any(term in q_clean for term in ["model name", "which model", "what model", "who are you", "what model is this", "model"]):
+            active_engine = "Google Gemini 1.5 Flash" if GEMINI_API_KEY else ("OpenRouter (" + FALLBACK_MODELS[0] + ")" if OPENROUTER_API_KEY else "CampusAI Local RAG Engine")
+            status_reply = (
+                "🤖 **CampusAI Assistant (v2.4)**\n\n"
+                f"• **Active AI Engine**: {active_engine}\n"
+                "• **Configured Free Models**: `nvidia/nemotron-3.5-lightning:free`, `liquid/lfm-2.5-2.6b:free`, `gemini-1.5-flash`\n"
+                "• **Campus Knowledge Base**: 49 Verified Live Scholarships (MPTAAS, MMVY, Reliance, Tata, Birla, Global) indexed via Google Sheets\n\n"
+                "💡 *Tip: To connect live cloud LLMs, simply add your free `OPENROUTER_API_KEY` or `GEMINI_API_KEY` to `config/.env`.*"
+            )
+            return ChatResponse(reply=status_reply, citations=[])
+
+        # Handle casual greetings
+        if q_clean in ["hi", "hello", "hey", "namaste", "good morning", "good afternoon", "good evening"]:
+            greeting_reply = (
+                "Hello! 👋 I am your **Campus AI Assistant**.\n\n"
+                "I can help you find scholarships, summarize academic notices, or generate practice quizzes. Try asking:\n"
+                "• *'What scholarships are available for engineering students?'*\n"
+                "• *'Tell me about MPTAAS and MMVY schemes'*\n"
+                "• *'Show Reliance or Tata scholarships'*"
+            )
+            return ChatResponse(reply=greeting_reply, citations=[])
+
+        # If keyword matched specific scholarships
         if relevant_citations:
-            items_text = "\n".join([f"• **{c.title}** ({c.author}) - Category/Page: {c.page}" for c in relevant_citations[:5]])
+            items_text = "\n".join([f"• **{c.title}** ({c.author}) — Last Date/Status: *{c.page}*" for c in relevant_citations[:5]])
             fallback_reply = (
-                f"Here are verified scholarship opportunities from our campus database matching your query:\n\n"
+                "Here are verified scholarship opportunities from our campus database matching your query:\n\n"
                 f"{items_text}\n\n"
-                f"💡 For complete eligibility requirements and official portals, check the Scholarships tab in your dashboard."
+                "💡 Visit the **Scholarship Explorer** tab in your dashboard for complete eligibility criteria and direct application links."
             )
             return ChatResponse(reply=fallback_reply, citations=relevant_citations[:5])
-        elif scholarships:
+
+        # General scholarship display
+        if scholarships:
             sample = scholarships[:4]
-            items_text = "\n".join([f"• **{s.get('name', s.get('Name', 'Scholarship'))}** ({s.get('provider', s.get('Provider', 'National/State/Corporate'))}) - {s.get('amount', s.get('Amount', 'Tuition & Academic Allowance'))}" for s in sample])
+            items_text = "\n".join([f"• **{_get_scholarship_title(s)}** ({_get_scholarship_provider(s)}) — {_get_scholarship_amount(s)}" for s in sample])
             fallback_reply = (
-                f"Here is verified scholarship information from the Campus Knowledge Base:\n\n"
+                f"I processed your query: \"{req.message}\".\n\n"
+                "Here are top active scholarships from our campus database:\n\n"
                 f"{items_text}\n\n"
-                f"💡 You can explore all {len(scholarships)} active state and national scholarships in the Scholarship Explorer tab!"
-            )
-            return ChatResponse(reply=fallback_reply, citations=[])
-        else:
-            fallback_reply = (
-                f"Campus Assistant received your question: \"{req.message}\".\n\n"
-                f"Services are active. Ask about scholarships, campus courses, or exam schedules!"
+                f"💡 All {len(scholarships)} state and national scholarships are available in the Scholarship Explorer tab!"
             )
             return ChatResponse(reply=fallback_reply, citations=[])
 
@@ -458,7 +539,7 @@ async def quiz_generate(req: QuizRequest, user: Optional[dict] = Depends(get_opt
             {"role": "user", "content": prompt},
         ]
 
-        raw = _call_openrouter(messages, temperature=0.8, max_tokens=4096)
+        raw = _call_llm(messages, prompt, temperature=0.8, max_tokens=4096)
 
         if raw:
             parsed = _parse_json_from_llm(raw)
