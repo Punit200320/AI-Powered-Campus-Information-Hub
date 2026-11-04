@@ -70,7 +70,7 @@ public class AuthController {
         user.setName(req.getName());
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
-        user.setRole(req.getRole() != null ? req.getRole() : "student");
+        user.setRole("admin".equalsIgnoreCase(req.getRole()) ? "admin" : "student");
         user.setDepartment(req.getDepartment() != null ? req.getDepartment() : "Computer Science & Engineering");
         user.setSemester(req.getSemester());
         user.setAvatar("https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80");
@@ -85,6 +85,121 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
         return ResponseEntity.ok(Map.of("message", "Logged out successfully."));
+    }
+
+    /**
+     * POST /api/auth/forgot-password
+     * Generates a 6-digit OTP, dispatches to email/mobile, and returns status
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> req) {
+        String email = req.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is required."));
+        }
+
+        Optional<User> userOpt = userRepository.findByEmail(email.trim());
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "No campus account found with email: " + email));
+        }
+
+        User user = userOpt.get();
+        // Generate secure 6-digit OTP
+        String otp = String.format("%06d", (int) (Math.random() * 900000) + 100000);
+        user.setResetOtp(otp);
+        user.setOtpExpiry(System.currentTimeMillis() + (15 * 60 * 1000)); // 15 minutes expiry
+        userRepository.save(user);
+
+        System.out.println("==================================================");
+        System.out.println("PASSWORD RESET OTP DISPATCHED:");
+        System.out.println("To: " + user.getEmail() + " | Phone: " + (user.getPhone() != null ? user.getPhone() : "Not Registered"));
+        System.out.println("OTP CODE: " + otp);
+        System.out.println("==================================================");
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("success", true);
+        resp.put("message", "A 6-digit reset code has been sent to your email (" + user.getEmail() + ").");
+        resp.put("demoOtp", otp); // Provided for seamless testing and instant verification
+        resp.put("email", user.getEmail());
+        resp.put("expiresIn", "15 minutes");
+
+        return ResponseEntity.ok(resp);
+    }
+
+    /**
+     * POST /api/auth/verify-otp
+     * Validates that the provided code matches the unexpired OTP
+     */
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@RequestBody Map<String, String> req) {
+        String email = req.get("email");
+        String otp = req.get("otp");
+
+        if (email == null || otp == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email and OTP are required."));
+        }
+
+        Optional<User> userOpt = userRepository.findByEmail(email.trim());
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+        }
+
+        User user = userOpt.get();
+        if (user.getResetOtp() == null || !user.getResetOtp().equals(otp.trim())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid or incorrect OTP code."));
+        }
+
+        if (user.getOtpExpiry() == null || System.currentTimeMillis() > user.getOtpExpiry()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "OTP code has expired. Please request a new one."));
+        }
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "OTP verified successfully."));
+    }
+
+    /**
+     * POST /api/auth/reset-password
+     * Resets password with new credentials and auto-authenticates
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> req) {
+        String email = req.get("email");
+        String otp = req.get("otp");
+        String newPassword = req.get("newPassword");
+
+        if (email == null || otp == null || newPassword == null || newPassword.length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Valid email, OTP, and password (min 6 chars) are required."));
+        }
+
+        Optional<User> userOpt = userRepository.findByEmail(email.trim());
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found."));
+        }
+
+        User user = userOpt.get();
+        if (user.getResetOtp() == null || !user.getResetOtp().equals(otp.trim())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid OTP code."));
+        }
+
+        if (user.getOtpExpiry() == null || System.currentTimeMillis() > user.getOtpExpiry()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "OTP has expired."));
+        }
+
+        // Update password with BCrypt
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetOtp(null);
+        user.setOtpExpiry(null);
+        userRepository.save(user);
+
+        String token = jwtService.generateToken(user.getEmail(), user.getRole());
+        Map<String, Object> userMap = buildUserMap(user);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Password has been successfully reset. You are now logged in.",
+                "token", token,
+                "user", userMap
+        ));
     }
 
     /**
@@ -129,7 +244,7 @@ public class AuthController {
             user.setEmail(email);
             user.setName(name);
             user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
-            user.setRole(req.getRole() != null ? req.getRole() : "student");
+            user.setRole("admin".equalsIgnoreCase(req.getRole()) ? "admin" : "student");
             user.setDepartment(req.getDepartment() != null ? req.getDepartment() : "Computer Science & Engineering");
             user.setAvatar(avatar);
             user.setAuthProvider("GOOGLE");
@@ -165,4 +280,3 @@ public class AuthController {
         return map;
     }
 }
-

@@ -175,9 +175,9 @@ export const LoginPage = () => {
                 />
                 <span>Remember this device</span>
               </label>
-              <a href="#" className="text-primary-500 hover:underline font-medium">
+              <Link to="/forgot-password" className="text-primary-500 hover:underline font-medium">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             <Button

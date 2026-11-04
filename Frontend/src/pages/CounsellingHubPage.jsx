@@ -21,11 +21,13 @@ import {
   X,
   HardDrive,
   BookOpen,
+  Bell,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { EmbeddedChatbot } from '../components/common/EmbeddedChatbot';
+import { NotificationSubscribeModal } from '../components/common/NotificationSubscribeModal';
 import { aiClient } from '../services/api';
 import { resourceService } from '../services/resourceService';
 import { fadeInUp, staggerContainer } from '../utils/animations';
@@ -39,6 +41,8 @@ export const CounsellingHubPage = () => {
   const [activeTab, setActiveTab] = useState('brochures'); // 'brochures' | 'tracks'
   const [scraping, setScraping] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
+  const [subscribeTarget, setSubscribeTarget] = useState({ title: 'Admissions & Allotment Rounds', type: 'counselling' });
 
   const handleRunScrapers = async () => {
     setScraping(true);
@@ -367,6 +371,17 @@ export const CounsellingHubPage = () => {
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
+                          onClick={() => {
+                            setSubscribeTarget({ title: doc.title, type: 'counselling' });
+                            setIsSubscribeModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors"
+                          title="Get Email & SMS Alerts"
+                        >
+                          <Bell className="w-3.5 h-3.5" />
+                          <span>Alerts</span>
+                        </button>
+                        <button
                           onClick={() => setPreviewDoc(doc)}
                           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors"
                           title="Preview in-site"
@@ -442,6 +457,18 @@ export const CounsellingHubPage = () => {
                         </h3>
                       </div>
 
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => {
+                            setSubscribeTarget({ title: item.Title, type: 'counselling' });
+                            setIsSubscribeModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors"
+                          title="Get Email & SMS Alerts"
+                        >
+                          <Bell className="w-3.5 h-3.5" />
+                          <span>Alerts</span>
+                        </button>
                       <a
                         href={item.Link || '#'}
                         target="_blank"
@@ -451,6 +478,7 @@ export const CounsellingHubPage = () => {
                         <span>Portal</span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
+                      </div>
                     </div>
 
                     {/* Benefit / Fee waiver banner */}
@@ -589,6 +617,14 @@ export const CounsellingHubPage = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Real-time Email & SMS Notification Subscription Modal */}
+      <NotificationSubscribeModal
+        isOpen={isSubscribeModalOpen}
+        onClose={() => setIsSubscribeModalOpen(false)}
+        targetTitle={subscribeTarget.title}
+        targetType={subscribeTarget.type}
+      />
     </motion.div>
   );
 };

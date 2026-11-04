@@ -15,6 +15,10 @@ import {
   AlertCircle,
   HelpCircle,
   Check,
+  Send,
+  Bell,
+  Smartphone,
+  Mail,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -31,6 +35,7 @@ import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
 import { MOCK_ADMIN_DATA } from '../data/mockData';
 import { adminService } from '../services/adminService';
+import apiClient from '../services/api';
 import { fadeInUp, staggerContainer } from '../utils/animations';
 import toast from 'react-hot-toast';
 
@@ -39,6 +44,10 @@ export const AdminPage = () => {
   const [selectedDocToDelete, setSelectedDocToDelete] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastMsg, setBroadcastMsg] = useState('');
+  const [broadcasting, setBroadcasting] = useState(false);
   const [searchDocQuery, setSearchDocQuery] = useState('');
 
   // New document form state
@@ -125,15 +134,26 @@ export const AdminPage = () => {
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="md"
-          onClick={() => setIsUploadModalOpen(true)}
-          leftIcon={Upload}
-          className="shadow-glow-sm"
-        >
-          Index New Academic Document
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => setIsBroadcastModalOpen(true)}
+            leftIcon={Send}
+            className="border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
+          >
+            📢 Broadcast Circular (Email & SMS)
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setIsUploadModalOpen(true)}
+            leftIcon={Upload}
+            className="shadow-glow-sm"
+          >
+            Index New Academic Document
+          </Button>
+        </div>
       </motion.div>
 
       {/* Top 4 Metrics Cards */}
@@ -463,6 +483,105 @@ export const AdminPage = () => {
               rightIcon={Sparkles}
             >
               Index & Synchronize
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Broadcast Circular Modal (Email & SMS Blast) */}
+      <Modal
+        isOpen={isBroadcastModalOpen}
+        onClose={() => setIsBroadcastModalOpen(false)}
+        title="Broadcast Urgent Circular via Email & SMS"
+        subtitle="Dispatches notifications to all registered students, applicants, and subscribers"
+        maxWidth="max-w-lg"
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!broadcastTitle.trim() || !broadcastMsg.trim()) {
+              toast.error('Title and message are required');
+              return;
+            }
+            setBroadcasting(true);
+            try {
+              const res = await apiClient.post('/notifications/broadcast', {
+                title: broadcastTitle.trim(),
+                message: broadcastMsg.trim(),
+                targetAudience: 'All Enrolled Students & Applicants',
+                channels: ['EMAIL', 'SMS'],
+              });
+              toast.success(res.data?.message || 'Broadcast circular dispatched via Email and SMS!', {
+                icon: '📢',
+                duration: 5000,
+              });
+              setIsBroadcastModalOpen(false);
+              setBroadcastTitle('');
+              setBroadcastMsg('');
+            } catch (err) {
+              toast.error('Failed to dispatch broadcast alert.');
+            } finally {
+              setBroadcasting(false);
+            }
+          }}
+          className="space-y-4"
+        >
+          <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-800 dark:text-indigo-300 flex items-center justify-between">
+            <span className="flex items-center gap-1.5 font-semibold">
+              <Smartphone className="w-4 h-4 text-indigo-500" />
+              Gateway Channels:
+            </span>
+            <div className="flex items-center gap-2">
+              <Badge variant="indigo" size="sm">Email Blast</Badge>
+              <Badge variant="emerald" size="sm">SMS Text Blast</Badge>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 block mb-1.5">
+              Circular Title / Subject
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. MMVY & MPTAAS Document Verification Extended"
+              value={broadcastTitle}
+              onChange={(e) => setBroadcastTitle(e.target.value)}
+              className="w-full glass-input rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 block mb-1.5">
+              Official Message & Directives
+            </label>
+            <textarea
+              rows={4}
+              placeholder="Write circular content to be delivered to students' inbox and mobile phones..."
+              value={broadcastMsg}
+              onChange={(e) => setBroadcastMsg(e.target.value)}
+              className="w-full glass-input rounded-xl p-3.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none resize-none"
+              required
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-white/10">
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={() => setIsBroadcastModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              type="submit"
+              isLoading={broadcasting}
+              rightIcon={Send}
+            >
+              Dispatch to 1,420+ Students
             </Button>
           </div>
         </form>

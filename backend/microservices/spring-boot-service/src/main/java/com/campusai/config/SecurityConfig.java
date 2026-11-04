@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers("/oauth2/**", "/login/**", "/error").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/api/resources/**").permitAll()
+                .requestMatchers("/api/notifications/**").permitAll()
                 .requestMatchers("/api/admin/**").permitAll()
                 .requestMatchers("/").permitAll()
                 .anyRequest().authenticated()

@@ -28,6 +28,9 @@ public class User {
     private String designation;
     private String avatar;
     private String authProvider = "LOCAL"; // LOCAL, GOOGLE
+    private String phone;
+    private String resetOtp;
+    private Long otpExpiry;
 
     public User() {}
 
@@ -62,5 +65,12 @@ public class User {
 
     public String getAuthProvider() { return authProvider; }
     public void setAuthProvider(String authProvider) { this.authProvider = authProvider; }
+
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public String getResetOtp() { return resetOtp; }
+    public void setResetOtp(String resetOtp) { this.resetOtp = resetOtp; }
+    public Long getOtpExpiry() { return otpExpiry; }
+    public void setOtpExpiry(Long otpExpiry) { this.otpExpiry = otpExpiry; }
 }
 
