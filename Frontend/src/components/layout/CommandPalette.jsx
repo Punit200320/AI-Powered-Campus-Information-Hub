@@ -21,7 +21,7 @@ const ACTIONS = [
   { id: 'quiz', title: 'Generate Practice MCQs', subtitle: 'Test knowledge with instant explanations', path: '/quiz', icon: HelpCircle, category: 'Practice' },
   { id: 'planner', title: 'Personalized Study Planner', subtitle: 'Daily timetable and exam roadmap', path: '/planner', icon: Calendar, category: 'Planning' },
   { id: 'saved', title: 'Saved & Bookmarked Resources', subtitle: 'Your starred study library', path: '/saved', icon: Bookmark, category: 'Resources' },
-  { id: 'admin', title: 'Admin & Faculty Analytics', subtitle: 'Vector metrics and document approval', path: '/admin', icon: Shield, category: 'Management' },
+  { id: 'admin', title: 'Admin Analytics Portal', subtitle: 'Vector metrics and document approval', path: '/admin', icon: Shield, category: 'Management' },
 ];
 
 export const CommandPalette = ({ isOpen, onClose }) => {

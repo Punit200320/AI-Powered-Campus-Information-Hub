@@ -111,7 +111,7 @@ export const AdminPage = () => {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Badge variant="indigo" size="sm">
-              Faculty & Administrator Portal
+              Administrator Operations Portal
             </Badge>
             <Badge variant="emerald" size="sm" dot>
               Qdrant Vector Cluster Healthy
@@ -121,7 +121,7 @@ export const AdminPage = () => {
             Academic Operations & RAG Telemetry
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-            Monitor real-time student query volumes, vector storage allocations, and approve new faculty syllabus handouts.
+            Monitor real-time student query volumes, vector storage allocations, and approve new academic handouts.
           </p>
         </div>
 
@@ -132,7 +132,7 @@ export const AdminPage = () => {
           leftIcon={Upload}
           className="shadow-glow-sm"
         >
-          Index New Faculty Document
+          Index New Academic Document
         </Button>
       </motion.div>
 

@@ -10,7 +10,6 @@ import {
   EyeOff,
   ArrowRight,
   GraduationCap,
-  Briefcase,
   Shield,
   Building,
 } from 'lucide-react';
@@ -34,8 +33,7 @@ export const RegisterPage = () => {
   const [errors, setErrors] = useState({});
 
   const ROLES = [
-    { id: 'student', label: 'Student', icon: GraduationCap },
-    { id: 'faculty', label: 'Faculty', icon: Briefcase },
+    { id: 'student', label: 'Student / User', icon: GraduationCap },
     { id: 'admin', label: 'Admin', icon: Shield },
   ];
 
@@ -65,13 +63,17 @@ export const RegisterPage = () => {
 
     setIsLoading(true);
     try {
-      await register({ name, email, role, department });
-      toast.success('Registration successful! Welcome to CampusAI.', {
+      await register({ name, email, department, role, password });
+      toast.success(`Account created successfully! Welcome, ${name}.`, {
         icon: '🎉',
       });
-      navigate('/dashboard');
+      if (role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
-      toast.error('Registration failed. Please try again.');
+      toast.error('Registration failed. Please check the information provided.');
     } finally {
       setIsLoading(false);
     }
@@ -81,10 +83,12 @@ export const RegisterPage = () => {
     <div className="min-h-screen flex bg-light-bg dark:bg-dark-bg text-slate-800 dark:text-slate-100 selection:bg-primary-500/20 selection:text-primary-600 relative overflow-hidden">
       <div className="ambient-glow" />
 
+      {/* Top right theme toggle */}
       <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>
 
+      {/* Left Column: Register Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -118,7 +122,7 @@ export const RegisterPage = () => {
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 block mb-2">
               Select Your Role
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {ROLES.map((r) => {
                 const Icon = r.icon;
                 const isSelected = role === r.id;
@@ -232,4 +236,3 @@ export const RegisterPage = () => {
 };
 
 export default RegisterPage;
-

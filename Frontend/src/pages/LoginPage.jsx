@@ -9,7 +9,6 @@ import {
   EyeOff,
   ArrowRight,
   GraduationCap,
-  Briefcase,
   Shield,
   CheckCircle2,
 } from 'lucide-react';
@@ -32,15 +31,13 @@ export const LoginPage = () => {
   const [errors, setErrors] = useState({});
 
   const ROLES = [
-    { id: 'student', label: 'Student', icon: GraduationCap, desc: 'Alex Vance (CS 6th Sem)' },
-    { id: 'faculty', label: 'Faculty', icon: Briefcase, desc: 'Dr. Evelyn Reed (AI Lead)' },
+    { id: 'student', label: 'Student / User', icon: GraduationCap, desc: 'Alex Vance (CS 6th Sem)' },
     { id: 'admin', label: 'Admin', icon: Shield, desc: 'Marcus Brody (IT Ops)' },
   ];
 
   const handleRoleSelect = (selectedRole) => {
     setRole(selectedRole);
     if (selectedRole === 'student') setEmail('alex.vance@campus.edu');
-    if (selectedRole === 'faculty') setEmail('e.reed@campus.edu');
     if (selectedRole === 'admin') setEmail('m.brody@campus.admin');
   };
 
@@ -119,7 +116,7 @@ export const LoginPage = () => {
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 block mb-2">
               Select Academic Role
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {ROLES.map((r) => {
                 const Icon = r.icon;
                 const isSelected = role === r.id;
@@ -274,4 +271,3 @@ export const LoginPage = () => {
 };
 
 export default LoginPage;
-

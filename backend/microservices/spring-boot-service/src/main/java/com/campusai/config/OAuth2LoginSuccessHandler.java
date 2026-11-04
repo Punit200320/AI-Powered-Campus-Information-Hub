@@ -99,9 +99,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             map.put("studentId", user.getStudentId());
             map.put("semester", user.getSemester());
         }
-        if ("faculty".equals(user.getRole())) {
-            map.put("designation", user.getDesignation());
-        }
         if ("admin".equals(user.getRole())) {
             map.put("designation", user.getDesignation());
             map.put("accessLevel", "SuperAdmin");

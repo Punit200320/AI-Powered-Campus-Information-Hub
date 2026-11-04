@@ -453,7 +453,7 @@ export const LandingPage = () => {
               <Shield className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-              Faculty & Admin Analytics
+              Admin Operations & Analytics
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
               Real-time telemetry on query trends, vector DB indexing status, active users, and document approval pipelines.
@@ -608,7 +608,7 @@ export const LandingPage = () => {
               Ready to Accelerate Your Academic Journey?
             </h2>
             <p className="mt-4 text-white/80 text-sm sm:text-base">
-              Join thousands of students and faculty leveraging intelligent campus automation today.
+              Join thousands of students and campus members leveraging intelligent automation today.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button

@@ -15,16 +15,6 @@ export const DEMO_USERS = {
     gpa: '3.88',
     credits: 114,
   },
-  faculty: {
-    id: 'usr_fac_102',
-    name: 'Dr. Evelyn Reed',
-    email: 'e.reed@campus.edu',
-    role: 'faculty',
-    department: 'Computer Science & AI Lab',
-    designation: 'Associate Professor & AI Research Lead',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    coursesTaught: ['Advanced Algorithms', 'Neural Networks', 'Distributed Systems'],
-  },
   admin: {
     id: 'usr_adm_999',
     name: 'Marcus Brody',
@@ -42,7 +32,11 @@ export const AuthProvider = ({ children }) => {
     const saved = localStorage.getItem('campusai_user');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed.role === 'faculty') {
+          return DEMO_USERS.student;
+        }
+        return parsed;
       } catch (e) {
         return DEMO_USERS.student;
       }
@@ -70,7 +64,7 @@ export const AuthProvider = ({ children }) => {
       ...DEMO_USERS.student,
       email,
       name: email.split('@')[0],
-      role,
+      role: role === 'admin' ? 'admin' : 'student',
     };
     setUser(matchedUser);
     return matchedUser;
@@ -82,7 +76,7 @@ export const AuthProvider = ({ children }) => {
       id: `usr_${Date.now()}`,
       name: userData.name,
       email: userData.email,
-      role: userData.role || 'student',
+      role: userData.role === 'admin' ? 'admin' : 'student',
       department: userData.department || 'Computer Science & Engineering',
       semester: userData.semester || '1st Semester',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
@@ -101,6 +95,9 @@ export const AuthProvider = ({ children }) => {
     if (jwt) {
       setToken(jwt);
       localStorage.setItem('campusai_token', jwt);
+    }
+    if (ssoUser && ssoUser.role === 'faculty') {
+      ssoUser.role = 'student';
     }
     setUser(ssoUser);
   };
@@ -123,7 +120,7 @@ export const AuthProvider = ({ children }) => {
         switchRole,
         ssoLogin,
         isStudent: user?.role === 'student',
-        isFaculty: user?.role === 'faculty',
+        isFaculty: false,
         isAdmin: user?.role === 'admin',
       }}
     >
@@ -139,4 +136,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

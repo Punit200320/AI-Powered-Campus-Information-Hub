@@ -154,9 +154,6 @@ public class AuthController {
             map.put("studentId", user.getStudentId() != null ? user.getStudentId() : "2026-CS-" + user.getId());
             map.put("semester", user.getSemester() != null ? user.getSemester() : "6th Semester");
         }
-        if ("faculty".equals(user.getRole())) {
-            map.put("designation", user.getDesignation() != null ? user.getDesignation() : "Assistant Professor");
-        }
         if ("admin".equals(user.getRole())) {
             map.put("designation", user.getDesignation() != null ? user.getDesignation() : "System Administrator");
             map.put("accessLevel", "SuperAdmin");
