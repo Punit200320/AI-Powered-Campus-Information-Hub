@@ -16,6 +16,7 @@ import {
   Layers,
   AlertCircle,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { EmbeddedChatbot } from '../components/common/EmbeddedChatbot';
@@ -27,6 +28,21 @@ export const CounsellingHubPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [scraping, setScraping] = useState(false);
+
+  const handleRunScrapers = async () => {
+    setScraping(true);
+    toast.success('Initiating Scrapy counselling spiders in background...', { icon: '🏛️' });
+    try {
+      await aiClient.post('/spiders/run');
+      toast.success('Scrapers active! Crawling MP DTE, JoSAA, CSAB seat allocations...', { duration: 4500 });
+      setTimeout(fetchCounselling, 3500);
+    } catch (err) {
+      toast.error('Failed to trigger background spiders.');
+    } finally {
+      setScraping(false);
+    }
+  };
 
   // Load scraped counselling tracks from backend
   const fetchCounselling = async () => {
@@ -157,14 +173,22 @@ export const CounsellingHubPage = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              onClick={handleRunScrapers}
+              disabled={scraping}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50"
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${scraping ? 'animate-spin' : ''}`} />
+              {scraping ? 'Scraping Portals...' : 'Run Web Scrapers'}
+            </button>
             <button
               onClick={fetchCounselling}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm transition-all"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm transition-all"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Sync Counselling Data
+              Sync Sheets
             </button>
           </div>
         </div>

@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Bookmark, BookOpen, Download, Trash2, ArrowRight, Star } from 'lucide-react';
+import { Bookmark, BookOpen, Download, Trash2, ArrowRight, Star, FileText } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { useBookmarks } from '../context/BookmarkContext';
+import { resourceService } from '../services/resourceService';
 import { MOCK_RESOURCES } from '../data/mockData';
 import { fadeInUp, staggerContainer } from '../utils/animations';
 import toast from 'react-hot-toast';
@@ -13,11 +14,33 @@ import toast from 'react-hot-toast';
 export const SavedResourcesPage = () => {
   const navigate = useNavigate();
   const { bookmarks, toggleBookmark } = useBookmarks();
+  const [allResources, setAllResources] = useState(MOCK_RESOURCES);
 
-  const savedList = MOCK_RESOURCES.filter((r) => bookmarks.includes(r.id));
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await resourceService.searchResources();
+        if (data && data.length > 0) {
+          setAllResources(data);
+        }
+      } catch (err) {
+        console.warn('Fallback to mock resources for saved list');
+      }
+    };
+    load();
+  }, []);
+
+  const savedList = allResources.filter((r) => bookmarks.includes(r.id));
 
   const handleDownload = (res) => {
-    toast.success(`Downloaded "${res.title.slice(0, 32)}..."`, { icon: '📥' });
+    toast.success(`Downloading "${res.title.slice(0, 32)}..." directly to your device`, { icon: '📥' });
+    const downloadUrl = `http://localhost:5000/api/resources/${res.id}/download`;
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.setAttribute('download', `${res.title.replace(/[^a-zA-Z0-9.-]/g, '_')}.txt`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -40,7 +63,7 @@ export const SavedResourcesPage = () => {
           Saved Study Materials
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-          Your offline-accessible collection of high-yield lecture slides, solved exam papers, and laboratory guides.
+          Your offline-accessible collection of high-yield lecture slides, solved exam papers, and laboratory guides with direct on-site downloading.
         </p>
       </motion.div>
 
@@ -51,66 +74,50 @@ export const SavedResourcesPage = () => {
             Your collection is empty
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Click the bookmark icon on any lecture note or PYQ in the Resource Finder to save it for quick revision.
+            Click the bookmark icon on any lecture note or PYQ in the Study Material Vault to save it for quick revision.
           </p>
           <Button
             variant="primary"
             size="md"
-            onClick={() => navigate('/resources')}
+            onClick={() => navigate('/study-material')}
             rightIcon={ArrowRight}
           >
-            Explore Resource Catalog
+            Explore Study Vault
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {savedList.map((res) => (
             <Card
               key={res.id}
               hoverEffect
-              glow
-              className="p-5 flex flex-col justify-between border-slate-200/80 dark:border-white/10"
+              className="p-5 flex flex-col justify-between space-y-4 border border-slate-200/80 dark:border-white/10"
             >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <Badge variant="indigo" size="sm">
-                      {res.category}
-                    </Badge>
-                    <Badge variant="neutral" size="sm">
-                      {res.semester}
-                    </Badge>
-                  </div>
-
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <Badge variant="indigo" size="sm">
+                    {res.category || 'Academic Resource'}
+                  </Badge>
                   <button
-                    onClick={() => toggleBookmark(res.id, res.title)}
-                    className="p-1.5 rounded-xl border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 transition-colors"
+                    onClick={() => toggleBookmark(res.id)}
+                    className="p-1 text-amber-500 hover:text-slate-400 transition-colors"
                     title="Remove from saved"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
-                    {res.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                    {res.description}
-                  </p>
-                </div>
+                <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white line-clamp-2">
+                  {res.title}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {res.department} • {res.semester}
+                </p>
               </div>
 
-              <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1 font-semibold text-amber-500">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    {res.rating}
-                  </span>
-                  <span>•</span>
-                  <span>{res.fileSize}</span>
-                </div>
-
+              <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                <span className="text-xs text-slate-400">
+                  {res.fileType || 'PDF'} • {res.fileSize || '6 MB'}
+                </span>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -129,4 +136,3 @@ export const SavedResourcesPage = () => {
 };
 
 export default SavedResourcesPage;
-

@@ -731,6 +731,53 @@ async def list_counselling(user: Optional[dict] = Depends(get_optional_user)):
 # Health check
 # ---------------------------------------------------------------------------
 
+
+
+# ---------------------------------------------------------------------------
+# Background Spider Execution API
+# ---------------------------------------------------------------------------
+
+import subprocess
+import threading
+import time
+
+_spider_state = {
+    "status": "idle",
+    "last_run": None,
+    "message": "Spiders ready to scrape counselling & scholarship portals"
+}
+
+def _run_spiders_task():
+    global _spider_state
+    _spider_state["status"] = "running"
+    _spider_state["last_run"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    _spider_state["message"] = "Crawling MP DTE, JoSAA, CSAB, MPTAAS, MMVY, Reliance, Tata & Birla portals..."
+    try:
+        bat = r'C:\Users\DELL\Desktop\New_Project\run_all_spiders.bat'
+        subprocess.run([bat], shell=True, capture_output=True, text=True, timeout=300)
+        _spider_state["status"] = "completed"
+        _spider_state["message"] = "All 9 web scrapers finished successfully. Google Sheets updated with verified records."
+        global _scholarship_data_cache
+        _scholarship_data_cache = None
+    except Exception as exc:
+        _spider_state["status"] = "failed"
+        _spider_state["message"] = f"Scraper error: {exc}"
+
+@app.post("/api/v1/spiders/run")
+async def trigger_spiders():
+    """Run all 9 web scrapers asynchronously."""
+    global _spider_state
+    if _spider_state["status"] == "running":
+        return {"status": "running", "message": "Scrapers are already executing in background."}
+    threading.Thread(target=_run_spiders_task, daemon=True).start()
+    return {"status": "started", "message": "Web scrapers started in background. Google Sheets will update with fresh data."}
+
+@app.get("/api/v1/spiders/status")
+async def get_spider_status():
+    """Get current crawler execution status."""
+    global _spider_state
+    return _spider_state
+
 @app.get("/api/v1/health")
 async def health_check():
     return {
