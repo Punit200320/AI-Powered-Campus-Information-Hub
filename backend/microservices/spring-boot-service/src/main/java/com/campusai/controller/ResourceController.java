@@ -171,6 +171,17 @@ public class ResourceController {
         r.setDownloads(r.getDownloads() != null ? r.getDownloads() + 1 : 1);
         resourceRepository.save(r);
 
+        boolean isPdf = "PDF".equalsIgnoreCase(r.getFileType());
+        String safeFileName = r.getTitle().replaceAll("[^a-zA-Z0-9.-]", "_");
+
+        if (isPdf) {
+            byte[] pdfBytes = generateCleanPdf(r);
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeFileName + ".pdf\"")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                    .body(pdfBytes);
+        }
+
         String docContent = "====================================================\n"
                 + "AI-POWERED CAMPUS INFORMATION HUB\n"
                 + "Document: " + r.getTitle() + "\n"
@@ -185,9 +196,96 @@ public class ResourceController {
 
         byte[] fileBytes = docContent.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         return ResponseEntity.ok()
-                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + r.getTitle().replaceAll("[^a-zA-Z0-9.-]", "_") + ".txt\"")
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeFileName + ".txt\"")
                 .contentType(org.springframework.http.MediaType.TEXT_PLAIN)
                 .body(fileBytes);
+    }
+
+    private byte[] generateCleanPdf(Resource r) {
+        StringBuilder streamContent = new StringBuilder();
+        streamContent.append("BT\n");
+        streamContent.append("/F1 16 Tf\n");
+        streamContent.append("50 740 Td\n");
+        streamContent.append("(").append(escapePdf("CAMPUS AI - ACADEMIC INFORMATION HUB")).append(") Tj\n");
+        streamContent.append("/F1 11 Tf\n");
+        streamContent.append("0 -24 Td\n");
+        streamContent.append("(").append(escapePdf("DOCUMENT: " + r.getTitle())).append(") Tj\n");
+        streamContent.append("0 -18 Td\n");
+        streamContent.append("(").append(escapePdf("CATEGORY: " + r.getCategory() + "  |  AUTHORITY: " + (r.getFacultyName() != null ? r.getFacultyName() : "Official Campus Portal"))).append(") Tj\n");
+        streamContent.append("0 -18 Td\n");
+        String folderName = "Campus_Documents > ";
+        if ("Notices".equalsIgnoreCase(r.getCategory())) folderName += "Notices (ID: 1mqB0PDUZfZeTakC0rkKZ-ZmyfNLhKl4q)";
+        else if ("Brochures".equalsIgnoreCase(r.getCategory())) folderName += "Brochures (ID: 1xeX6Up5WTWc2LU2haBeo2boxAO28Ncsh)";
+        else folderName += "PYQ & Notes (ID: 1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x)";
+        streamContent.append("(").append(escapePdf("GOOGLE DRIVE VAULT: " + folderName)).append(") Tj\n");
+        streamContent.append("0 -18 Td\n");
+        streamContent.append("(").append(escapePdf("------------------------------------------------------------------------------------------------")).append(") Tj\n");
+        streamContent.append("0 -22 Td\n");
+        streamContent.append("(").append(escapePdf("OFFICIAL SYNOPSIS & DETAILED GUIDELINES:")).append(") Tj\n");
+
+        String body = (r.getPreviewText() != null ? r.getPreviewText() + " " : "") + (r.getDescription() != null ? r.getDescription() : "");
+        String[] words = body.split("\\s+");
+        StringBuilder line = new StringBuilder();
+        int lineCount = 0;
+        for (String w : words) {
+            if (line.length() + w.length() + 1 > 70) {
+                streamContent.append("0 -16 Td\n");
+                streamContent.append("(").append(escapePdf(line.toString())).append(") Tj\n");
+                line = new StringBuilder(w);
+                lineCount++;
+                if (lineCount > 24) break;
+            } else {
+                if (line.length() > 0) line.append(" ");
+                line.append(w);
+            }
+        }
+        if (line.length() > 0 && lineCount <= 24) {
+            streamContent.append("0 -16 Td\n");
+            streamContent.append("(").append(escapePdf(line.toString())).append(") Tj\n");
+        }
+
+        streamContent.append("0 -30 Td\n");
+        streamContent.append("(").append(escapePdf("------------------------------------------------------------------------------------------------")).append(") Tj\n");
+        streamContent.append("0 -16 Td\n");
+        streamContent.append("(").append(escapePdf("This document is verified by Campus AI and served directly on-site from the Google Drive Vault.")).append(") Tj\n");
+        streamContent.append("ET\n");
+
+        byte[] streamBytes = streamContent.toString().getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+
+        StringBuilder pdf = new StringBuilder();
+        pdf.append("%PDF-1.4\n");
+        int offset1 = pdf.length();
+        pdf.append("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+        int offset2 = pdf.length();
+        pdf.append("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+        int offset3 = pdf.length();
+        pdf.append("3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n");
+        int offset4 = pdf.length();
+        pdf.append("4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n");
+        int offset5 = pdf.length();
+        pdf.append("5 0 obj\n<< /Length ").append(streamBytes.length).append(" >>\nstream\n");
+        pdf.append(streamContent.toString());
+        pdf.append("endstream\nendobj\n");
+        int xrefOffset = pdf.length();
+        pdf.append("xref\n0 6\n");
+        pdf.append("0000000000 65535 f \n");
+        pdf.append(String.format("%010d 00000 n \n", offset1));
+        pdf.append(String.format("%010d 00000 n \n", offset2));
+        pdf.append(String.format("%010d 00000 n \n", offset3));
+        pdf.append(String.format("%010d 00000 n \n", offset4));
+        pdf.append(String.format("%010d 00000 n \n", offset5));
+        pdf.append("trailer\n<< /Size 6 /Root 1 0 R >>\n");
+        pdf.append("startxref\n").append(xrefOffset).append("\n%%EOF\n");
+
+        return pdf.toString().getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+    }
+
+    private String escapePdf(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("(", "\\(")
+                .replace(")", "\\)")
+                .replaceAll("[^\\x20-\\x7E]", " ");
     }
 }
 

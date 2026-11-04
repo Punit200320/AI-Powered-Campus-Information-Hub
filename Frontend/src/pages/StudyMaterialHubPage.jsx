@@ -70,11 +70,11 @@ export const StudyMaterialHubPage = () => {
 
   const handleDownload = (doc) => {
     // In-site direct file download (never redirects to Google Drive)
-    toast.success(`Downloading "${doc.title}" directly to your device...`);
+    toast.success(`Downloading "${doc.title}" PDF directly to your device...`);
     const downloadUrl = `http://localhost:5000/api/resources/${doc.id}/download`;
     const link = document.createElement('a');
     link.href = downloadUrl;
-    link.setAttribute('download', `${doc.title}.txt`);
+    link.setAttribute('download', `${doc.title}.pdf`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

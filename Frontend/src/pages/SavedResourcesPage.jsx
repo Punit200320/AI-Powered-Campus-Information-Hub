@@ -33,11 +33,11 @@ export const SavedResourcesPage = () => {
   const savedList = allResources.filter((r) => bookmarks.includes(r.id));
 
   const handleDownload = (res) => {
-    toast.success(`Downloading "${res.title.slice(0, 32)}..." directly to your device`, { icon: '📥' });
+    toast.success(`Downloading "${res.title.slice(0, 32)}..." PDF directly to your device`, { icon: '📥' });
     const downloadUrl = `http://localhost:5000/api/resources/${res.id}/download`;
     const link = document.createElement('a');
     link.href = downloadUrl;
-    link.setAttribute('download', `${res.title.replace(/[^a-zA-Z0-9.-]/g, '_')}.txt`);
+    link.setAttribute('download', `${res.title.replace(/[^a-zA-Z0-9.-]/g, '_')}.pdf`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
