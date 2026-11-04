@@ -225,7 +225,17 @@ export const CounsellingHubPage = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <button
+              onClick={() => {
+                setSubscribeTarget({ title: 'MP DTE Round 1, JoSAA & CLC Live Allotment Alerts', type: 'counselling' });
+                setIsSubscribeModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-all"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>🔔 Get Allotment Alerts</span>
+            </button>
             <button
               onClick={handleRunScrapers}
               disabled={scraping}
@@ -379,7 +389,7 @@ export const CounsellingHubPage = () => {
                           title="Get Email & SMS Alerts"
                         >
                           <Bell className="w-3.5 h-3.5" />
-                          <span>Alerts</span>
+                          <span>🔔 Get Allotment Alerts</span>
                         </button>
                         <button
                           onClick={() => setPreviewDoc(doc)}
@@ -467,7 +477,7 @@ export const CounsellingHubPage = () => {
                           title="Get Email & SMS Alerts"
                         >
                           <Bell className="w-3.5 h-3.5" />
-                          <span>Alerts</span>
+                          <span>🔔 Get Allotment Alerts</span>
                         </button>
                       <a
                         href={item.Link || '#'}

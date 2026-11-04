@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen,
+  Bell,
   Search,
   Download,
   Eye,
@@ -24,6 +25,7 @@ import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { EmbeddedChatbot } from '../components/common/EmbeddedChatbot';
+import { NotificationSubscribeModal } from '../components/common/NotificationSubscribeModal';
 import { resourceService } from '../services/resourceService';
 import { toast } from 'react-hot-toast';
 import { fadeInUp, staggerContainer } from '../utils/animations';
@@ -34,6 +36,8 @@ export const StudyMaterialHubPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
+  const [subscribeTarget, setSubscribeTarget] = useState({ title: 'Semester Exam & Solved PYQs', type: 'exam' });
 
   // Upload modal state
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -147,7 +151,17 @@ export const StudyMaterialHubPage = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <button
+              onClick={() => {
+                setSubscribeTarget({ title: 'Semester Exam Schedule & Solved PYQ Alerts', type: 'exam' });
+                setIsSubscribeModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-all"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>🔔 Get Exam & PYQ Alerts</span>
+            </button>
             <button
               onClick={() => setIsUploadModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm transition-all"
@@ -281,7 +295,18 @@ export const StudyMaterialHubPage = () => {
                       {doc.fileType} • {doc.fileSize} • {doc.downloads} downloads
                     </span>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => {
+                          setSubscribeTarget({ title: doc.title, type: 'exam' });
+                          setIsSubscribeModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors"
+                        title="Get Email and SMS Alerts for Exam and PYQs"
+                      >
+                        <Bell className="w-3.5 h-3.5" />
+                        <span>🔔 Get Exam & PYQ Alerts</span>
+                      </button>
                       <button
                         onClick={() => setPreviewDoc(doc)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
@@ -485,6 +510,14 @@ export const StudyMaterialHubPage = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Real-time Notification Modal for Semester Exam & PYQ Alerts */}
+      <NotificationSubscribeModal
+        isOpen={isSubscribeModalOpen}
+        onClose={() => setIsSubscribeModalOpen(false)}
+        targetTitle={subscribeTarget.title}
+        targetType={subscribeTarget.type}
+      />
     </motion.div>
   );
 };
