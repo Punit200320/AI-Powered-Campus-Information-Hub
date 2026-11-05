@@ -5,6 +5,8 @@
 -- All passwords: password123 (BCrypt encoded)
 -- Only 2 Roles: Student / User and Admin
 INSERT INTO users (name, email, password, role, department, semester, student_id, designation, avatar) VALUES
+('Punit Chandel', 'punitchandel8@gmail.com', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'student', 'Computer Science & Engineering', '6th Semester', '2026-CS-991', NULL, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'),
+('Punit Chandel', 'punitchandel16@gmail.com', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'student', 'Computer Science & Engineering', '6th Semester', '2026-CS-992', NULL, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'),
 ('Alex Vance', 'alex.vance@campus.edu', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'student', 'Computer Science & Engineering', '6th Semester', '2026-CS-882', NULL, 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'),
 ('Marcus Brody', 'm.brody@campus.admin', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'admin', 'Campus IT & Academic Operations', NULL, NULL, 'Senior System Administrator', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80');
 

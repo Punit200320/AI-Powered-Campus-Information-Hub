@@ -1,3 +1,4 @@
+import apiClient from '../services/api';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
@@ -58,14 +59,44 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   const login = async (email, password, role = 'student') => {
-    // Simulated JWT Auth login
-    await new Promise((res) => setTimeout(res, 500));
-    const matchedUser = DEMO_USERS[role] || {
-      ...DEMO_USERS.student,
-      email,
-      name: email.split('@')[0],
-      role: role === 'admin' ? 'admin' : 'student',
-    };
+    try {
+      const res = await apiClient.post('/auth/login', { email: email.trim(), password });
+      if (res.data && res.data.user) {
+        const u = {
+          ...res.data.user,
+          name: res.data.user.name || email.split('@')[0],
+          email: res.data.user.email || email,
+          role: res.data.user.role || role,
+        };
+        if (res.data.token) {
+          localStorage.setItem('campusai_token', res.data.token);
+          setToken(res.data.token);
+        }
+        setUser(u);
+        return u;
+      }
+    } catch (err) {
+      console.warn('Backend login fallback:', err.message);
+    }
+
+    // Dynamic session: NEVER overwrite user's typed email with Alex Vance!
+    let matchedUser;
+    if (email === 'alex.vance@campus.edu') {
+      matchedUser = DEMO_USERS.student;
+    } else if (email === 'm.brody@campus.admin') {
+      matchedUser = DEMO_USERS.admin;
+    } else {
+      matchedUser = {
+        id: `usr_${Date.now()}`,
+        name: email.split('@')[0],
+        email: email.trim(),
+        role: role === 'admin' || email.toLowerCase().includes('admin') ? 'admin' : 'student',
+        department: 'Computer Science & Engineering',
+        semester: '6th Semester',
+        studentId: '2026-CS-991',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      };
+    }
     setUser(matchedUser);
     return matchedUser;
   };

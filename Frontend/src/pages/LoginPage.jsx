@@ -37,8 +37,10 @@ export const LoginPage = () => {
 
   const handleRoleSelect = (selectedRole) => {
     setRole(selectedRole);
-    if (selectedRole === 'student') setEmail('alex.vance@campus.edu');
-    if (selectedRole === 'admin') setEmail('m.brody@campus.admin');
+    if (!email || email === 'alex.vance@campus.edu' || email === 'm.brody@campus.admin') {
+      if (selectedRole === 'student') setEmail('alex.vance@campus.edu');
+      if (selectedRole === 'admin') setEmail('m.brody@campus.admin');
+    }
   };
 
   const validate = () => {
@@ -56,8 +58,8 @@ export const LoginPage = () => {
 
     setIsLoading(true);
     try {
-      await login(email, password, role);
-      toast.success(`Welcome back, ${DEMO_USERS[role]?.name || 'Scholar'}!`, {
+      const loggedUser = await login(email, password, role);
+      toast.success(`Welcome back, ${loggedUser?.name || email.split('@')[0]}!`, {
         icon: '👋',
       });
       if (role === 'admin') {
@@ -138,7 +140,11 @@ export const LoginPage = () => {
               })}
             </div>
             <p className="text-[11px] text-slate-400 mt-1.5 text-center">
-              Active persona: <strong className="text-primary-500">{DEMO_USERS[role]?.name}</strong>
+              {email ? (
+                <>Signing in as: <strong className="text-primary-500">{email}</strong></>
+              ) : (
+                <>Selected Role: <strong className="text-primary-500">{role === 'admin' ? 'Administrator' : 'Student / User'}</strong></>
+              )}
             </p>
           </div>
 
