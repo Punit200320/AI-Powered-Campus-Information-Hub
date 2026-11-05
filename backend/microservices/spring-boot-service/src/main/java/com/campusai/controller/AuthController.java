@@ -8,6 +8,8 @@ import com.campusai.model.User;
 import com.campusai.repository.UserRepository;
 import com.campusai.service.GoogleOAuth2Service;
 import com.campusai.service.JwtService;
+import com.campusai.service.EmailService;
+import com.campusai.service.SmsService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +28,10 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final GoogleOAuth2Service googleOAuth2Service;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private EmailService emailService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private SmsService smsService;
 
     public AuthController(UserRepository userRepository,
                           PasswordEncoder passwordEncoder,
@@ -110,6 +116,13 @@ public class AuthController {
         user.setResetOtp(otp);
         user.setOtpExpiry(System.currentTimeMillis() + (15 * 60 * 1000)); // 15 minutes expiry
         userRepository.save(user);
+
+        if (emailService != null) {
+            emailService.sendOtpEmail(user.getEmail(), otp);
+        }
+        if (smsService != null && user.getPhone() != null && !user.getPhone().isBlank()) {
+            smsService.sendSms(user.getPhone(), "Campus AI: Your 6-digit password reset code is " + otp + ". Valid for 15 minutes.");
+        }
 
         System.out.println("==================================================");
         System.out.println("PASSWORD RESET OTP DISPATCHED:");
