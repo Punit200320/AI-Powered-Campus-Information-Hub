@@ -17,13 +17,13 @@ export const DEMO_USERS = {
     credits: 114,
   },
   admin: {
-    id: 'usr_adm_999',
-    name: 'Marcus Brody',
-    email: 'm.brody@campus.admin',
+    id: 'usr_adm_001',
+    name: 'Punit Chandel',
+    email: 'admin@campus.edu',
     role: 'admin',
     department: 'Campus IT & Academic Operations',
-    designation: 'Senior System Administrator',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    designation: 'Chief Administrator & Campus Controller',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
     accessLevel: 'SuperAdmin',
   },
 };
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
     let matchedUser;
     if (email === 'alex.vance@campus.edu') {
       matchedUser = DEMO_USERS.student;
-    } else if (email === 'm.brody@campus.admin') {
+    } else if (email === 'admin@campus.edu') {
       matchedUser = DEMO_USERS.admin;
     } else {
       matchedUser = {

@@ -124,7 +124,7 @@ export const Navbar = ({ onOpenCommand, onToggleSidebar }) => {
                     <GraduationCap className="w-4 h-4" />
                     <div>
                       <div className="font-semibold">Student / User</div>
-                      <div className="text-[10px] opacity-80">Alex Vance (CS 6th Sem)</div>
+                      <div className="text-[10px] opacity-80">Punit Chandel (Student)</div>
                     </div>
                   </button>
                   <button
@@ -138,7 +138,7 @@ export const Navbar = ({ onOpenCommand, onToggleSidebar }) => {
                     <Shield className="w-4 h-4" />
                     <div>
                       <div className="font-semibold">Admin View</div>
-                      <div className="text-[10px] opacity-80">System & Vector DB</div>
+                      <div className="text-[10px] opacity-80">Punit Chandel (Administrator)</div>
                     </div>
                   </button>
                 </motion.div>

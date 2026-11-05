@@ -32,14 +32,14 @@ export const LoginPage = () => {
 
   const ROLES = [
     { id: 'student', label: 'Student / User', icon: GraduationCap, desc: 'Alex Vance (CS 6th Sem)' },
-    { id: 'admin', label: 'Admin', icon: Shield, desc: 'Marcus Brody (IT Ops)' },
+    { id: 'admin', label: 'Admin', icon: Shield, desc: 'Punit Chandel (Administrator)' },
   ];
 
   const handleRoleSelect = (selectedRole) => {
     setRole(selectedRole);
-    if (!email || email === 'alex.vance@campus.edu' || email === 'm.brody@campus.admin') {
+    if (!email || email === 'alex.vance@campus.edu' || email === 'admin@campus.edu') {
       if (selectedRole === 'student') setEmail('alex.vance@campus.edu');
-      if (selectedRole === 'admin') setEmail('m.brody@campus.admin');
+      if (selectedRole === 'admin') setEmail('admin@campus.edu');
     }
   };
 
@@ -153,7 +153,7 @@ export const LoginPage = () => {
             <Input
               label="Campus Email Address"
               type="email"
-              placeholder="username@campus.edu"
+              placeholder="admin@campus.edu or student email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               leftIcon={Mail}
