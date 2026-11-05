@@ -8,40 +8,24 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  GraduationCap,
-  Shield,
   CheckCircle2,
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Badge } from '../components/common/Badge';
 import { ThemeToggle } from '../components/common/ThemeToggle';
-import { useAuth, DEMO_USERS } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [role, setRole] = useState('student');
-  const [email, setEmail] = useState('alex.vance@campus.edu');
-  const [password, setPassword] = useState('••••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-
-  const ROLES = [
-    { id: 'student', label: 'Student / User', icon: GraduationCap, desc: 'Alex Vance (CS 6th Sem)' },
-    { id: 'admin', label: 'Admin', icon: Shield, desc: 'Punit Chandel (Administrator)' },
-  ];
-
-  const handleRoleSelect = (selectedRole) => {
-    setRole(selectedRole);
-    if (!email || email === 'alex.vance@campus.edu' || email === 'admin@campus.edu') {
-      if (selectedRole === 'student') setEmail('alex.vance@campus.edu');
-      if (selectedRole === 'admin') setEmail('admin@campus.edu');
-    }
-  };
 
   const validate = () => {
     const errs = {};
@@ -58,11 +42,11 @@ export const LoginPage = () => {
 
     setIsLoading(true);
     try {
-      const loggedUser = await login(email, password, role);
+      const loggedUser = await login(email, password);
       toast.success(`Welcome back, ${loggedUser?.name || email.split('@')[0]}!`, {
         icon: '👋',
       });
-      if (role === 'admin') {
+      if (loggedUser?.role === 'admin' || email.trim().toLowerCase().includes('admin')) {
         navigate('/admin');
       } else {
         navigate('/dashboard');
@@ -109,42 +93,7 @@ export const LoginPage = () => {
               Sign In to Your Workspace
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Select your academic role and authenticate
-            </p>
-          </div>
-
-          {/* Role selector tabs */}
-          <div className="mb-6">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 block mb-2">
-              Select Academic Role
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {ROLES.map((r) => {
-                const Icon = r.icon;
-                const isSelected = role === r.id;
-                return (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => handleRoleSelect(r.id)}
-                    className={`p-2.5 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-center ${
-                      isSelected
-                        ? 'border-primary-500 bg-primary-500/15 text-primary-600 dark:text-primary-300 shadow-sm'
-                        : 'border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="text-xs font-semibold">{r.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1.5 text-center">
-              {email ? (
-                <>Signing in as: <strong className="text-primary-500">{email}</strong></>
-              ) : (
-                <>Selected Role: <strong className="text-primary-500">{role === 'admin' ? 'Administrator' : 'Student / User'}</strong></>
-              )}
+              Unified authentication for students, faculty & administrators
             </p>
           </div>
 
@@ -153,7 +102,7 @@ export const LoginPage = () => {
             <Input
               label="Campus Email Address"
               type="email"
-              placeholder="admin@campus.edu or student email"
+              placeholder="e.g. admin@campus.edu or student email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               leftIcon={Mail}
@@ -163,7 +112,7 @@ export const LoginPage = () => {
             <Input
               label="Password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••••••"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               leftIcon={Lock}
@@ -194,7 +143,7 @@ export const LoginPage = () => {
               isLoading={isLoading}
               rightIcon={ArrowRight}
             >
-              Sign In as {ROLES.find((r) => r.id === role)?.label}
+              Sign In to Workspace
             </Button>
           </form>
 

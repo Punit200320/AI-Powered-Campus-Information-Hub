@@ -58,15 +58,19 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
-  const login = async (email, password, role = 'student') => {
+  const login = async (email, password, role) => {
+    const cleanEmail = (email || '').trim();
+    const isAdminCandidate = role === 'admin' || cleanEmail.toLowerCase().includes('admin');
+    const computedRole = isAdminCandidate ? 'admin' : 'student';
+
     try {
-      const res = await apiClient.post('/auth/login', { email: email.trim(), password });
+      const res = await apiClient.post('/auth/login', { email: cleanEmail, password });
       if (res.data && res.data.user) {
         const u = {
           ...res.data.user,
-          name: res.data.user.name || email.split('@')[0],
-          email: res.data.user.email || email,
-          role: res.data.user.role || role,
+          name: res.data.user.name || cleanEmail.split('@')[0],
+          email: res.data.user.email || cleanEmail,
+          role: res.data.user.role || computedRole,
         };
         if (res.data.token) {
           localStorage.setItem('campusai_token', res.data.token);
@@ -79,22 +83,25 @@ export const AuthProvider = ({ children }) => {
       console.warn('Backend login fallback:', err.message);
     }
 
-    // Dynamic session: NEVER overwrite user's typed email with Alex Vance!
+    // Dynamic session fallback
     let matchedUser;
-    if (email === 'alex.vance@campus.edu') {
-      matchedUser = DEMO_USERS.student;
-    } else if (email === 'admin@campus.edu') {
+    const lowerEmail = cleanEmail.toLowerCase();
+    if (lowerEmail === 'admin@campus.edu') {
       matchedUser = DEMO_USERS.admin;
+    } else if (lowerEmail === 'alex.vance@campus.edu') {
+      matchedUser = DEMO_USERS.student;
     } else {
       matchedUser = {
         id: `usr_${Date.now()}`,
-        name: email.split('@')[0],
-        email: email.trim(),
-        role: role === 'admin' || email.toLowerCase().includes('admin') ? 'admin' : 'student',
-        department: 'Computer Science & Engineering',
-        semester: '6th Semester',
-        studentId: '2026-CS-991',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        name: cleanEmail.split('@')[0],
+        email: cleanEmail,
+        role: computedRole,
+        department: isAdminCandidate ? 'Campus IT & Academic Operations' : 'Computer Science & Engineering',
+        semester: isAdminCandidate ? 'Staff' : '6th Semester',
+        studentId: isAdminCandidate ? 'FAC-2026-001' : '2026-CS-991',
+        avatar: isAdminCandidate
+          ? 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80'
+          : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       };
     }
     setUser(matchedUser);
