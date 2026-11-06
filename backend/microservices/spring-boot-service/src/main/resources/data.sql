@@ -4,11 +4,11 @@
 
 -- All passwords: password123 (BCrypt encoded)
 -- Only 2 Roles: Student / User and Admin
-INSERT INTO users (name, email, password, role, department, semester, student_id, designation, avatar) VALUES
-('Punit Chandel', 'punitchandel8@gmail.com', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'student', 'Computer Science & Engineering', '6th Semester', '2026-CS-991', NULL, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'),
-('Punit Chandel', 'punitchandel16@gmail.com', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'student', 'Computer Science & Engineering', '6th Semester', '2026-CS-992', NULL, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'),
-('Alex Vance', 'alex.vance@campus.edu', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'student', 'Computer Science & Engineering', '6th Semester', '2026-CS-882', NULL, 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'),
-('Punit Chandel', 'admin@campus.edu', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'admin', 'Campus IT & Academic Operations', NULL, NULL, 'Chief Administrator & Campus Controller', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80');
+INSERT INTO users (name, email, password, role, department, semester, student_id, designation, avatar, phone) VALUES
+('Punit Chandel', 'punitchandel8@gmail.com', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'student', 'Computer Science & Engineering', '6th Semester', '2026-CS-991', NULL, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80', '8815791785'),
+('Punit Chandel', 'punitchandel16@gmail.com', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'student', 'Computer Science & Engineering', '6th Semester', '2026-CS-992', NULL, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80', '8815791785'),
+('Alex Vance', 'alex.vance@campus.edu', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'student', 'Computer Science & Engineering', '6th Semester', '2026-CS-882', NULL, 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', '9876543210'),
+('Punit Chandel', 'admin@campus.edu', '$2a$10$EHdiqDuAL4b9IdeK6Qa48uE2v326Sn3XFMJWJ/knTfFG6TdqLqkZO', 'admin', 'Campus IT & Academic Operations', NULL, NULL, 'Chief Administrator & Campus Controller', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80', '8815791785');
 
 -- ===================== RESOURCES (Academic) =====================
 INSERT INTO resources (id, title, description, category, department, semester, subject, file_type, file_size, pages, downloads, rating, faculty_verified, faculty_name, uploaded_at, tags, preview_text, status, chunks, uploaded_by, upload_date, vector_id) VALUES
