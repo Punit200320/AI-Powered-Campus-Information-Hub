@@ -175,7 +175,27 @@ public class ResourceController {
         String safeFileName = r.getTitle().replaceAll("[^a-zA-Z0-9.-]", "_");
 
         if (isPdf) {
-            byte[] pdfBytes = generateCleanPdf(r);
+            byte[] pdfBytes = null;
+            String[] possiblePaths = {
+                "storage/documents/" + id + ".pdf",
+                "backend/storage/documents/" + id + ".pdf",
+                "../../storage/documents/" + id + ".pdf",
+                "C:/Users/DELL/Desktop/New_Project/storage/documents/" + id + ".pdf"
+            };
+            for (String p : possiblePaths) {
+                java.io.File f = new java.io.File(p);
+                if (f.exists() && f.length() > 0) {
+                    try {
+                        pdfBytes = java.nio.file.Files.readAllBytes(f.toPath());
+                        break;
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            if (pdfBytes == null) {
+                pdfBytes = generateCleanPdf(r);
+            }
+
             return ResponseEntity.ok()
                     .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeFileName + ".pdf\"")
                     .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
