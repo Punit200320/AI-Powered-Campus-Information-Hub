@@ -29,9 +29,15 @@ public class SmsService {
     @Value("${twilio.from.number:}")
     private String twilioFromNumber;
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(6))
-            .build();
+    private HttpClient getHttpClient() {
+        try {
+            return HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(6))
+                    .build();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     /**
      * Sends SMS to the student's mobile number.
@@ -72,16 +78,19 @@ public class SmsService {
                         .timeout(Duration.ofSeconds(8))
                         .build();
 
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                boolean isDelivered = response.statusCode() == 200;
-                result.put("success", isDelivered);
-                result.put("status", isDelivered ? "DELIVERED_VIA_FAST2SMS" : "FAST2SMS_NOTICE");
-                result.put("gateway", "Fast2SMS India Gateway");
-                result.put("gatewayResponse", response.body());
-                result.put("whatsappUrl", "https://api.whatsapp.com/send?phone=91" + localNumber + "&text=" + URLEncoder.encode(messageText, StandardCharsets.UTF_8));
-                System.out.println("[FAST2SMS DISPATCH] To: " + localNumber + " | Status: " + response.statusCode() + " | Response: " + response.body());
-                if (isDelivered) {
-                    return result;
+                HttpClient client = getHttpClient();
+                if (client != null) {
+                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                    boolean isDelivered = response.statusCode() == 200;
+                    result.put("success", isDelivered);
+                    result.put("status", isDelivered ? "DELIVERED_VIA_FAST2SMS" : "FAST2SMS_NOTICE");
+                    result.put("gateway", "Fast2SMS India Gateway");
+                    result.put("gatewayResponse", response.body());
+                    result.put("whatsappUrl", "https://api.whatsapp.com/send?phone=91" + localNumber + "&text=" + URLEncoder.encode(messageText, StandardCharsets.UTF_8));
+                    System.out.println("[FAST2SMS DISPATCH] To: " + localNumber + " | Status: " + response.statusCode() + " | Response: " + response.body());
+                    if (isDelivered) {
+                        return result;
+                    }
                 }
             } catch (Exception e) {
                 System.err.println("[FAST2SMS FAILED] " + e.getMessage() + ". Falling back to logged gateway.");
@@ -110,12 +119,15 @@ public class SmsService {
                         .timeout(Duration.ofSeconds(8))
                         .build();
 
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                result.put("success", response.statusCode() == 200 || response.statusCode() == 201);
-                result.put("status", "DELIVERED_VIA_TWILIO");
-                result.put("gateway", "Twilio Global SMS");
-                System.out.println("[REAL TWILIO SMS SENT] To: " + formattedTo);
-                return result;
+                HttpClient client = getHttpClient();
+                if (client != null) {
+                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                    result.put("success", response.statusCode() == 200 || response.statusCode() == 201);
+                    result.put("status", "DELIVERED_VIA_TWILIO");
+                    result.put("gateway", "Twilio Global SMS");
+                    System.out.println("[REAL TWILIO SMS SENT] To: " + formattedTo);
+                    return result;
+                }
             } catch (Exception e) {
                 System.err.println("[TWILIO SMS FAILED] " + e.getMessage() + ". Falling back to logged gateway.");
             }

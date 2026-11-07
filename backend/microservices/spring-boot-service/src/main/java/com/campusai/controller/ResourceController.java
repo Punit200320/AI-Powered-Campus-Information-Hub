@@ -2,9 +2,13 @@ package com.campusai.controller;
 
 import com.campusai.model.Resource;
 import com.campusai.repository.ResourceRepository;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -115,7 +119,6 @@ public class ResourceController {
         String uploadedBy = (String) payload.getOrDefault("uploadedBy", "Student Contributor");
         String customId = (String) payload.get("id");
 
-        // Admin approval check: user uploads are "Pending Verification" until approved by Admin
         String status = (String) payload.getOrDefault("status", "Pending Verification");
         Boolean facultyVerified = (Boolean) payload.getOrDefault("facultyVerified", false);
 
@@ -127,24 +130,28 @@ public class ResourceController {
         res.setDepartment(department);
         res.setSemester(semester);
         res.setSubject(subject);
-        res.setFileType((String) payload.getOrDefault("fileType", "PDF"));
-        res.setFileSize((String) payload.getOrDefault("fileSize", "4.8 MB"));
-        res.setPages(payload.get("pages") != null ? (Integer) payload.get("pages") : 16);
-        res.setDownloads(payload.get("downloads") != null ? (Integer) payload.get("downloads") : 0);
-        res.setRating(payload.get("rating") != null ? ((Number) payload.get("rating")).doubleValue() : 4.8);
+        res.setFileType("PDF");
+        res.setFileSize("4.5 MB");
+        res.setPages(18);
+        res.setDownloads(1);
+        res.setRating(5.0);
         res.setFacultyVerified(facultyVerified);
-        res.setUploadedAt(facultyVerified ? "Verified" : "Pending Admin Review");
-        res.setUploadedBy(uploadedBy);
+        res.setFacultyName(facultyVerified ? "Admin Verified" : "Pending Review");
+        res.setUploadedAt("Just now");
         res.setStatus(status);
-        res.setPreviewText((String) payload.getOrDefault("previewText", "Document indexed in Campus Vault. Direct site download available."));
+        res.setUploadedBy(uploadedBy);
+        res.setUploadDate("Today");
+        res.setPreviewText("Official academic document uploaded and submitted for verified campus repository archiving.");
 
+        String folderId;
         String catLower = category.toLowerCase();
-        String folderId = "1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x"; // default PYQ
-        if (catLower.contains("notice")) {
+        if (catLower.contains("pyq") || catLower.contains("previous")) {
+            folderId = "1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x";
+        } else if (catLower.contains("notice")) {
             folderId = "1mqB0PDUZfZeTakC0rkKZ-ZmyfNLhKl4q";
         } else if (catLower.contains("note") || catLower.contains("lecture")) {
             folderId = "17K7qVk7_1LgSACWtp58WsgdTaTLYnOSw";
-        } else if (catLower.contains("brochure") || catLower.contains("circular") || catLower.contains("syllabus")) {
+        } else {
             folderId = "1xeX6Up5WTWc2LU2haBeo2boxAO28Ncsh";
         }
 
@@ -177,16 +184,18 @@ public class ResourceController {
         if (isPdf) {
             byte[] pdfBytes = null;
             String[] possiblePaths = {
+                "C:/Users/DELL/Desktop/Scrapy/AI-Powered-Campus-Information-Hub/storage/documents/" + id + ".pdf",
+                "C:/Users/DELL/Desktop/Scrapy/storage/documents/" + id + ".pdf",
                 "storage/documents/" + id + ".pdf",
                 "backend/storage/documents/" + id + ".pdf",
                 "../../storage/documents/" + id + ".pdf",
                 "C:/Users/DELL/Desktop/New_Project/storage/documents/" + id + ".pdf"
             };
             for (String p : possiblePaths) {
-                java.io.File f = new java.io.File(p);
+                File f = new File(p);
                 if (f.exists() && f.length() > 0) {
                     try {
-                        pdfBytes = java.nio.file.Files.readAllBytes(f.toPath());
+                        pdfBytes = Files.readAllBytes(f.toPath());
                         break;
                     } catch (Exception ignored) {}
                 }
@@ -197,8 +206,8 @@ public class ResourceController {
             }
 
             return ResponseEntity.ok()
-                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeFileName + ".pdf\"")
-                    .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeFileName + ".pdf\"")
+                    .contentType(MediaType.APPLICATION_PDF)
                     .body(pdfBytes);
         }
 
@@ -216,9 +225,118 @@ public class ResourceController {
 
         byte[] fileBytes = docContent.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         return ResponseEntity.ok()
-                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeFileName + ".txt\"")
-                .contentType(org.springframework.http.MediaType.TEXT_PLAIN)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeFileName + ".txt\"")
+                .contentType(MediaType.TEXT_PLAIN)
                 .body(fileBytes);
+    }
+
+    @GetMapping("/{id}/summary")
+    public ResponseEntity<Map<String, Object>> getResourceSummary(@PathVariable String id) {
+        Optional<Resource> opt = resourceRepository.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Resource r = opt.get();
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("id", r.getId());
+        resp.put("title", r.getTitle());
+        resp.put("pages", r.getPages());
+        resp.put("fileSize", r.getFileSize());
+        resp.put("fileType", r.getFileType());
+        resp.put("authority", r.getFacultyName() != null ? r.getFacultyName() : "Higher Education Department MP");
+
+        Map<String, Object> aiSummary = new LinkedHashMap<>();
+        if ("res_sch_01".equalsIgnoreCase(id)) {
+            aiSummary.put("keyTakeaways", Arrays.asList(
+                "100% Tuition Fee Reimbursement by MP Government for technical & professional degrees.",
+                "Mandatory MP Domicile and 70% in MP Board (or 85% in CBSE/ICSE).",
+                "JEE Main Common Rank List (CRL) must be within 1,50,000.",
+                "Annual family income cap: strictly below Rs. 6,00,000.",
+                "Zero tuition fees charged by institution during physical admission reporting."
+            ));
+            aiSummary.put("eligibility", "MP Domicile, 70% (MP Board) / 85% (CBSE/ICSE), JEE Main CRL <= 1.5 Lakh");
+            aiSummary.put("incomeCap", "Rs. 6.00 Lakhs / Annum (Computerized RS3 / Digital Tehsildar Certificate)");
+            aiSummary.put("financialBenefits", "100% Tuition Fee + Caution Deposit reimbursed via State Treasury DBT");
+            aiSummary.put("requiredDocuments", Arrays.asList(
+                "Aadhaar e-KYC linked with 9-digit Samagra Member ID",
+                "10th & 12th Digital Marksheets (MPBSE / CBSE)",
+                "Digital Income Certificate with active QR Code",
+                "State Domicile Certificate (Mool Niwas Praman Patra)",
+                "DTE / College Admission Allotment Letter"
+            ));
+            aiSummary.put("deadlines", "Within 30 days of college admission / semester result declaration");
+        } else if ("res_sch_02".equalsIgnoreCase(id)) {
+            aiSummary.put("keyTakeaways", Arrays.asList(
+                "Complete post-matric scholarship coverage for SC, ST, and OBC (Non-Creamy Layer) scholars.",
+                "Compulsory Biometric Aadhaar e-KYC on MPTAAS V3.4 (tribal.mp.gov.in).",
+                "Monthly maintenance stipend: Rs. 1,200/mo (Hosteller) & Rs. 550/mo (Day Scholar).",
+                "Awas Sahayata Yojana: Additional Rs. 2,00,0/mo room rent subsidy for rural migrant scholars.",
+                "Direct Benefit Transfer through PFMS into Aadhaar-seeded bank account."
+            ));
+            aiSummary.put("eligibility", "Verified SC/ST/OBC category resident of Madhya Pradesh");
+            aiSummary.put("incomeCap", "ST/SC: Rs. 6.00 Lakhs | OBC Non-Creamy Layer: Rs. 3.00 Lakhs");
+            aiSummary.put("financialBenefits", "100% Tuition Waiver + Monthly Stipend + Book Bank Grant + Awas Sahayata");
+            aiSummary.put("requiredDocuments", Arrays.asList(
+                "Aadhaar Biometric Samagra e-KYC validation",
+                "Digital RS3 computerized Caste Certificate",
+                "Tehsildar Non-Creamy Layer / Income Certificate",
+                "College Enrollment Number & University Registration",
+                "Active Bank Account with Aadhaar NPCI mapper enabled"
+            ));
+            aiSummary.put("deadlines", "Ongoing for 2026-27 session on tribal.mp.gov.in/mptaas");
+        } else if ("res_sch_03".equalsIgnoreCase(id)) {
+            aiSummary.put("keyTakeaways", Arrays.asList(
+                "Reliance Foundation grants up to Rs. 2,00,000 (UG) and Rs. 6,00,000 (PG) over degree tenure.",
+                "Open to 1st year full-time undergraduate students across all STEM and professional disciplines.",
+                "Selection based on 60-minute online aptitude assessment and family income weighting.",
+                "Access to exclusive global mentor networks and leadership workshops."
+            ));
+            aiSummary.put("eligibility", "1st Year Full-Time UG, Minimum 60% in 12th Board examinations");
+            aiSummary.put("incomeCap", "Household income < Rs. 15,00,000 (Preference given to < Rs. 2.50 Lakhs)");
+            aiSummary.put("financialBenefits", "Up to Rs. 2 Lakhs directly transferred in annual academic installments");
+            aiSummary.put("requiredDocuments", Arrays.asList(
+                "10th & 12th Marksheets",
+                "College Bonafide Student Certificate",
+                "Income Tax Return (ITR) or Official Family Income Certificate",
+                "Aadhaar Identity Proof"
+            ));
+            aiSummary.put("deadlines", "Application closes end of November 2026");
+        } else if ("res_counsel_01".equalsIgnoreCase(id)) {
+            aiSummary.put("keyTakeaways", Arrays.asList(
+                "Centralized online admission for B.Tech/B.E. across all government & private MP engineering colleges.",
+                "85% seats reserved for MP State Domicile; 15% seats under All India Quota (AIQ).",
+                "Strict merit ranking governed by NTA JEE Main Common Rank List (CRL).",
+                "Round 1 Upgradation allows float option without forfeiting initial allotment.",
+                "Two College Level Counselling (CLC) on-spot rounds conducted for leftover vacant seats."
+            ));
+            aiSummary.put("eligibility", "10+2 with Physics, Mathematics & Chemistry/CompSci + Valid JEE Main score");
+            aiSummary.put("incomeCap", "General: No limit | TFW Quota: Below Rs. 8 Lakhs | MMVY: Below Rs. 6 Lakhs");
+            aiSummary.put("financialBenefits", "Eligible for fee reimbursement under MMVY, MPTAAS, or TFW schemes");
+            aiSummary.put("requiredDocuments", Arrays.asList(
+                "JEE Main 2026 Scorecard / Admit Card",
+                "10th & 12th Marksheets",
+                "MP Domicile Certificate (for 85% state quota)",
+                "Category / EWS / PwD Certificate (if claiming reservation)",
+                "Medical Fitness Certificate & Transfer Certificate (TC)"
+            ));
+            aiSummary.put("deadlines", "Choice locking closes 48 hours prior to provisional round allotment");
+        } else {
+            aiSummary.put("keyTakeaways", Arrays.asList(
+                r.getTitle() + " official verified publication.",
+                "Detailed syllabus, past year problem solutions, and exam blueprints.",
+                "Directly verified by academic faculty (" + (r.getFacultyName() != null ? r.getFacultyName() : "Campus Academic Board") + ").",
+                "Complete " + (r.getPages() != null ? r.getPages() : 18) + "-page official document available for direct download."
+            ));
+            aiSummary.put("eligibility", "Open to all enrolled university students");
+            aiSummary.put("incomeCap", "N/A - Open Academic Resource");
+            aiSummary.put("financialBenefits", "Free Academic Hub Document Access");
+            aiSummary.put("requiredDocuments", Arrays.asList("University Roll Number", "Student ID"));
+            aiSummary.put("deadlines", "Semester Exam Revision Schedule");
+        }
+
+        resp.put("aiSummary", aiSummary);
+        resp.put("downloadUrl", "/api/resources/" + r.getId() + "/download");
+        return ResponseEntity.ok(resp);
     }
 
     private byte[] generateCleanPdf(Resource r) {
@@ -308,4 +426,3 @@ public class ResourceController {
                 .replaceAll("[^\\x20-\\x7E]", " ");
     }
 }
-
