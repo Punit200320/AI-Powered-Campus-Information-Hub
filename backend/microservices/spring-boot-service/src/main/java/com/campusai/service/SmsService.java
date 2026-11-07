@@ -62,8 +62,7 @@ public class SmsService {
                 String payload = String.format(
                         "{\"route\":\"q\",\"message\":\"%s\",\"language\":\"english\",\"numbers\":\"%s\"}",
                         messageText.replace("\"", "\\\""),
-                        localNumber
-                );
+                        localNumber);
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create("https://www.fast2sms.com/dev/bulkV2"))
@@ -90,7 +89,7 @@ public class SmsService {
         }
 
         // 2. Try Twilio (Global SMS)
-        if (twilioAccountSid != null && !twilioAccountSid.isBlank() 
+        if (twilioAccountSid != null && !twilioAccountSid.isBlank()
                 && twilioAuthToken != null && !twilioAuthToken.isBlank()
                 && twilioFromNumber != null && !twilioFromNumber.isBlank()) {
             try {
@@ -100,11 +99,11 @@ public class SmsService {
                         + "&Body=" + URLEncoder.encode(messageText, StandardCharsets.UTF_8);
 
                 String authHeader = "Basic " + Base64.getEncoder().encodeToString(
-                        (twilioAccountSid.trim() + ":" + twilioAuthToken.trim()).getBytes(StandardCharsets.UTF_8)
-                );
+                        (twilioAccountSid.trim() + ":" + twilioAuthToken.trim()).getBytes(StandardCharsets.UTF_8));
 
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(String.format("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json", twilioAccountSid.trim())))
+                        .uri(URI.create(String.format("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json",
+                                twilioAccountSid.trim())))
                         .header("Authorization", authHeader)
                         .header("Content-Type", "application/x-www-form-urlencoded")
                         .POST(HttpRequest.BodyPublishers.ofString(formBody, StandardCharsets.UTF_8))
@@ -122,8 +121,9 @@ public class SmsService {
             }
         }
 
-        // 3. Fallback: High-fidelity SMS Gateway Simulator with WhatsApp Click-to-Chat Link
-        String whatsappLink = "https://api.whatsapp.com/send?phone=" 
+        // 3. Fallback: High-fidelity SMS Gateway Simulator with WhatsApp Click-to-Chat
+        // Link
+        String whatsappLink = "https://api.whatsapp.com/send?phone="
                 + (sanitizedPhone.startsWith("91") ? sanitizedPhone : ("91" + localNumber))
                 + "&text=" + URLEncoder.encode(messageText, StandardCharsets.UTF_8);
 
