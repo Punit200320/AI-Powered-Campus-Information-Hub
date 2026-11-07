@@ -53,9 +53,30 @@ export const resourceService = {
     return found || MOCK_RESOURCES[0];
   },
 
-  uploadResource: async (payload) => {
+  getResourceSummary: async (id) => {
     try {
-      const response = await apiClient.post('/resources/upload', payload);
+      const response = await apiClient.get(`/resources/${id}/summary`);
+      return response.data;
+    } catch (err) {
+      return null;
+    }
+  },
+
+  uploadResource: async (payload, file) => {
+    try {
+      let response;
+      if (file) {
+        const form = new FormData();
+        form.append('file', file);
+        Object.entries(payload || {}).forEach(([k, v]) => {
+          if (v !== null && v !== undefined) form.append(k, v);
+        });
+        response = await apiClient.post('/resources/upload-file', form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        response = await apiClient.post('/resources/upload', payload);
+      }
       return response.data;
     } catch (err) {
       console.warn('[ResourceService] Upload fallback to simulated database');

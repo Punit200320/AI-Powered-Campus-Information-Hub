@@ -41,8 +41,25 @@ export const CounsellingHubPage = () => {
   const [activeTab, setActiveTab] = useState('brochures'); // 'brochures' | 'tracks'
   const [scraping, setScraping] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [modalTab, setModalTab] = useState('summary'); // 'summary' | 'full'
+  const [docSummary, setDocSummary] = useState(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
   const [subscribeTarget, setSubscribeTarget] = useState({ title: 'Admissions & Allotment Rounds', type: 'counselling' });
+
+  const openPreview = async (doc, initialTab = 'summary') => {
+    setPreviewDoc(doc);
+    setModalTab(initialTab);
+    setIsSummaryLoading(true);
+    try {
+      const summaryData = await resourceService.getResourceSummary(doc.id);
+      setDocSummary(summaryData);
+    } catch {
+      setDocSummary(null);
+    } finally {
+      setIsSummaryLoading(false);
+    }
+  };
 
   const handleRunScrapers = async () => {
     setScraping(true);
@@ -389,10 +406,18 @@ export const CounsellingHubPage = () => {
                           title="Get Email & SMS Alerts"
                         >
                           <Bell className="w-3.5 h-3.5" />
-                          <span>🔔 Get Allotment Alerts</span>
+                          <span>🔔 Alerts</span>
                         </button>
                         <button
-                          onClick={() => setPreviewDoc(doc)}
+                          onClick={() => openPreview(doc, 'summary')}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-semibold transition-colors"
+                          title="✨ Summarize with AI"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>AI Summary</span>
+                        </button>
+                        <button
+                          onClick={() => openPreview(doc, 'full')}
                           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors"
                           title="Preview in-site"
                         >
@@ -402,10 +427,10 @@ export const CounsellingHubPage = () => {
                         <button
                           onClick={() => handleDownload(doc)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors"
-                          title="Download PDF directly"
+                          title={`Download Full Official PDF (${doc.pages || 24} Pages)`}
                         >
                           <Download className="w-3.5 h-3.5" />
-                          <span>Download PDF</span>
+                          <span>Download PDF ({doc.pages || 24}P)</span>
                         </button>
                       </div>
                     </div>
@@ -542,17 +567,17 @@ export const CounsellingHubPage = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden"
+              className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[88vh]"
             >
               {/* Header */}
-              <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/40">
+              <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/40 shrink-0">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Badge variant="indigo" size="sm" dot>
                       Official Admission Authority Document
                     </Badge>
                     <span className="text-xs text-slate-500 font-mono">
-                      {previewDoc.fileType || 'PDF'} • {previewDoc.fileSize || '11.4 MB'}
+                      {previewDoc.fileType || 'PDF'} • {previewDoc.fileSize || '11.4 MB'} • {previewDoc.pages || 24} Pages
                     </span>
                   </div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -570,39 +595,151 @@ export const CounsellingHubPage = () => {
                 </button>
               </div>
 
+              {/* Mode Switcher Tabs */}
+              <div className="px-6 pt-3 border-b border-slate-200 dark:border-white/10 flex items-center gap-4 bg-slate-50/30 dark:bg-slate-800/20 shrink-0">
+                <button
+                  onClick={() => setModalTab('summary')}
+                  className={`pb-3 text-xs font-bold transition-colors flex items-center gap-1.5 border-b-2 ${
+                    modalTab === 'summary'
+                      ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>✨ AI Smart Summary &amp; Eligibility</span>
+                </button>
+                <button
+                  onClick={() => setModalTab('full')}
+                  className={`pb-3 text-xs font-bold transition-colors flex items-center gap-1.5 border-b-2 ${
+                    modalTab === 'full'
+                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>📜 Full Rulebook &amp; Business Rules ({previewDoc.pages || 24} Pages)</span>
+                </button>
+              </div>
+
               {/* Body */}
-              <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-800 dark:text-indigo-300 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <HardDrive className="w-4 h-4 text-indigo-600" />
-                    Storage: Campus_Documents &gt; Brochures (Folder ID: {previewDoc.driveFolderId || '1xeX6Up5WTWc2LU2haBeo2boxAO28Ncsh'})
-                  </span>
-                  <span className="font-semibold">{previewDoc.pages || 68} Pages</span>
-                </div>
+              <div className="p-6 space-y-4 overflow-y-auto grow">
+                {modalTab === 'summary' ? (
+                  <div className="space-y-4">
+                    {isSummaryLoading ? (
+                      <div className="py-8 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                        <RefreshCw className="w-4 h-4 animate-spin text-amber-500" />
+                        <span>AI is synthesizing the {previewDoc.pages || 24}-page official rulebook...</span>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Key Highlights */}
+                        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                          <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Executive Summary &amp; Admission Directives</span>
+                          </h4>
+                          <ul className="space-y-1.5 text-xs text-amber-900/90 dark:text-amber-200/90">
+                            {(docSummary?.aiSummary?.keyTakeaways || [
+                              'Centralized online admission for engineering and technical programs.',
+                              'State Domicile 85% quota and All India 15% quota seat matrices.',
+                              'Allotments determined strictly by NTA JEE Main Common Rank List (CRL).',
+                              'Direct download of complete official multi-page rulebook available below.'
+                            ]).map((pt, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <span className="text-amber-500 font-bold shrink-0">•</span>
+                                <span>{pt}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
 
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Official Synopsis &amp; Business Rules
-                  </h4>
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 font-mono text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    {previewDoc.previewText || previewDoc.description}
+                        {/* Eligibility & Merit Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">🎓 Eligibility Criteria</span>
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                              {docSummary?.aiSummary?.eligibility || '10+2 with PCM + Valid JEE Main score'}
+                            </p>
+                          </div>
+                          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">💰 Fee Waiver / Quotas</span>
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                              {docSummary?.aiSummary?.incomeCap || 'General: Open | TFW: Income < 8L | MMVY: Income < 6L'}
+                            </p>
+                          </div>
+                          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">🏆 Seat Matrix &amp; Rounds</span>
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                              {docSummary?.aiSummary?.financialBenefits || 'Round 1, Upgradation Float, Round 2, CLC Spot 1 & 2'}
+                            </p>
+                          </div>
+                          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">⏳ Choice Locking Deadline</span>
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                              {docSummary?.aiSummary?.deadlines || '48 hours before provisional round allotment'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Required Documents Checklist */}
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-2">
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                            <FileCheck className="w-3.5 h-3.5 text-indigo-500" />
+                            <span>Mandatory Documents Checklist for Document Verification Center</span>
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300">
+                            {(docSummary?.aiSummary?.requiredDocuments || [
+                              'JEE Main 2026 Scorecard / Rank Letter',
+                              'Class 10th & 12th Board Marksheets',
+                              'MP Domicile Certificate (for 85% state quota seats)',
+                              'Category / EWS / PwD Certificate (if applicable)',
+                              'Provisional Seat Allotment Letter & Fee Receipt'
+                            ]).map((d, i) => (
+                              <div key={i} className="flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                <span>{d}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-800 dark:text-indigo-300 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <HardDrive className="w-4 h-4 text-indigo-600" />
+                        Storage Vault: Campus_Documents &gt; Brochures (Folder ID: {previewDoc.driveFolderId || '1xeX6Up5WTWc2LU2haBeo2boxAO28Ncsh'})
+                      </span>
+                      <span className="font-semibold">{previewDoc.pages || 24} Pages Complete Rulebook</span>
+                    </div>
 
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Full Description
-                  </h4>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    {previewDoc.description}
-                  </p>
-                </div>
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Official Synopsis &amp; Business Rules
+                      </h4>
+                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 font-mono text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                        {previewDoc.previewText || previewDoc.description}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Full Description
+                      </h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {previewDoc.description}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
-              <div className="p-4 sm:p-6 border-t border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between gap-3">
-                <div className="text-xs text-slate-500">
-                  Direct In-Site Download (No external redirection)
+              <div className="p-4 sm:p-6 border-t border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between gap-3 shrink-0">
+                <div className="text-xs text-slate-500 flex items-center gap-1">
+                  <span>Authentic Full Document ({previewDoc.pages || 24} Pages)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -619,7 +756,7 @@ export const CounsellingHubPage = () => {
                     className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Download PDF Document</span>
+                    <span>Download Full Official PDF ({previewDoc.pages || 24} Pages)</span>
                   </button>
                 </div>
               </div>
