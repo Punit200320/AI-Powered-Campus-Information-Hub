@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Sparkles,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const ACTIONS = [
   { id: 'chat', title: 'Ask Campus AI Chatbot', subtitle: 'Instant answers with source citations', path: '/chat', icon: MessageSquare, category: 'AI Tools' },
@@ -25,16 +26,20 @@ const ACTIONS = [
 ];
 
 export const CommandPalette = ({ isOpen, onClose }) => {
+  const { isSuperAdmin, isAdmin } = useAuth();
+  const canAccessAdmin = isSuperAdmin || isAdmin;
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
 
-  const filteredActions = ACTIONS.filter(
-    (action) =>
+  const filteredActions = ACTIONS.filter((action) => {
+    if (action.id === 'admin' && !canAccessAdmin) return false;
+    return (
       action.title.toLowerCase().includes(query.toLowerCase()) ||
       action.subtitle.toLowerCase().includes(query.toLowerCase()) ||
       action.category.toLowerCase().includes(query.toLowerCase())
-  );
+    );
+  });
 
   useEffect(() => {
     setSelectedIndex(0);

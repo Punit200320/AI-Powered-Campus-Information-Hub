@@ -40,7 +40,7 @@ const NAV_ITEMS = [
 
 export const Sidebar = ({ isCollapsed, onToggleCollapse, isMobileOpen, onCloseMobile }) => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
 
   const sidebarContent = (
     <div className="flex flex-col h-full justify-between select-none">
@@ -74,7 +74,12 @@ export const Sidebar = ({ isCollapsed, onToggleCollapse, isMobileOpen, onCloseMo
 
         {/* Navigation items list */}
         <nav className="space-y-1 px-2.5 pt-2">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.filter((item) => {
+            if (item.role === 'admin') {
+              return isSuperAdmin || user?.role === 'admin';
+            }
+            return true;
+          }).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 

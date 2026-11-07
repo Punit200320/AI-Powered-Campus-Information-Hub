@@ -18,6 +18,21 @@ import { PlannerPage } from '../pages/PlannerPage';
 import { AdminPage } from '../pages/AdminPage';
 import { SavedResourcesPage } from '../pages/SavedResourcesPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { useAuth } from '../context/AuthContext';
+
+// Protected Admin Guard
+const AdminProtectedRoute = ({ children }) => {
+  const { user, isSuperAdmin } = useAuth();
+  const isAdminAuthorized =
+    isSuperAdmin ||
+    user?.role === 'admin' ||
+    (user?.email && user.email.toLowerCase().includes('admin'));
+
+  if (!isAdminAuthorized) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
 
 // Scroll to top helper on route change
 function ScrollToTop() {
@@ -55,7 +70,14 @@ export const AppRoutes = () => {
           <Route path="/quiz" element={<QuizPage />} />
           <Route path="/planner" element={<PlannerPage />} />
           <Route path="/saved" element={<SavedResourcesPage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route
+            path="/admin"
+            element={
+              <AdminProtectedRoute>
+                <AdminPage />
+              </AdminProtectedRoute>
+            }
+          />
         </Route>
 
         {/* 404 Catch-All */}

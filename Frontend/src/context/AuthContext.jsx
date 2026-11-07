@@ -66,11 +66,14 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await apiClient.post('/auth/login', { email: cleanEmail, password });
       if (res.data && res.data.user) {
+        const isBackendAdmin = res.data.user.role === 'admin' || cleanEmail.toLowerCase().includes('admin');
         const u = {
           ...res.data.user,
           name: res.data.user.name || cleanEmail.split('@')[0],
           email: res.data.user.email || cleanEmail,
-          role: res.data.user.role || computedRole,
+          role: res.data.user.role || (isBackendAdmin ? 'admin' : 'student'),
+          actualRole: isBackendAdmin ? 'admin' : 'student',
+          isSuperAdmin: isBackendAdmin,
         };
         if (res.data.token) {
           localStorage.setItem('campusai_token', res.data.token);
@@ -87,15 +90,17 @@ export const AuthProvider = ({ children }) => {
     let matchedUser;
     const lowerEmail = cleanEmail.toLowerCase();
     if (lowerEmail === 'admin@campus.edu') {
-      matchedUser = DEMO_USERS.admin;
+      matchedUser = { ...DEMO_USERS.admin, actualRole: 'admin', isSuperAdmin: true };
     } else if (lowerEmail === 'alex.vance@campus.edu') {
-      matchedUser = DEMO_USERS.student;
+      matchedUser = { ...DEMO_USERS.student, actualRole: 'student', isSuperAdmin: false };
     } else {
       matchedUser = {
         id: `usr_${Date.now()}`,
         name: cleanEmail.split('@')[0],
         email: cleanEmail,
         role: computedRole,
+        actualRole: isAdminCandidate ? 'admin' : 'student',
+        isSuperAdmin: isAdminCandidate,
         department: isAdminCandidate ? 'Campus IT & Academic Operations' : 'Computer Science & Engineering',
         semester: isAdminCandidate ? 'Staff' : '6th Semester',
         studentId: isAdminCandidate ? 'FAC-2026-001' : '2026-CS-991',
@@ -141,10 +146,35 @@ export const AuthProvider = ({ children }) => {
   };
 
   const switchRole = (newRole) => {
-    if (DEMO_USERS[newRole]) {
-      setUser(DEMO_USERS[newRole]);
+    const isUserAdmin = user?.actualRole === 'admin' 
+      || user?.isSuperAdmin 
+      || user?.email === 'admin@campus.edu' 
+      || (user?.email && user.email.toLowerCase().includes('admin'));
+
+    if (!isUserAdmin) {
+      console.warn('Unauthorized role switch attempt blocked for normal user.');
+      return;
+    }
+
+    if (newRole === 'student') {
+      setUser((prev) => ({
+        ...prev,
+        role: 'student',
+        previewMode: true,
+      }));
+    } else if (newRole === 'admin') {
+      setUser((prev) => ({
+        ...prev,
+        role: 'admin',
+        previewMode: false,
+      }));
     }
   };
+
+  const isSuperAdmin = user?.actualRole === 'admin' 
+    || user?.isSuperAdmin 
+    || user?.email === 'admin@campus.edu' 
+    || (user?.email && user.email.toLowerCase().includes('admin'));
 
   return (
     <AuthContext.Provider
@@ -160,6 +190,7 @@ export const AuthProvider = ({ children }) => {
         isStudent: user?.role === 'student',
         isFaculty: false,
         isAdmin: user?.role === 'admin',
+        isSuperAdmin,
       }}
     >
       {children}
