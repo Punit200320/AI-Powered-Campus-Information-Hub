@@ -74,12 +74,16 @@ public class SmsService {
                         .build();
 
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                result.put("success", response.statusCode() == 200);
-                result.put("status", response.statusCode() == 200 ? "DELIVERED_VIA_FAST2SMS" : "FAST2SMS_ERROR_" + response.statusCode());
+                boolean isDelivered = response.statusCode() == 200;
+                result.put("success", isDelivered);
+                result.put("status", isDelivered ? "DELIVERED_VIA_FAST2SMS" : "FAST2SMS_NOTICE");
                 result.put("gateway", "Fast2SMS India Gateway");
                 result.put("gatewayResponse", response.body());
-                System.out.println("[REAL FAST2SMS SENT] To: " + localNumber + " | Response: " + response.body());
-                return result;
+                result.put("whatsappUrl", "https://api.whatsapp.com/send?phone=91" + localNumber + "&text=" + URLEncoder.encode(messageText, StandardCharsets.UTF_8));
+                System.out.println("[FAST2SMS DISPATCH] To: " + localNumber + " | Status: " + response.statusCode() + " | Response: " + response.body());
+                if (isDelivered) {
+                    return result;
+                }
             } catch (Exception e) {
                 System.err.println("[FAST2SMS FAILED] " + e.getMessage() + ". Falling back to logged gateway.");
             }
