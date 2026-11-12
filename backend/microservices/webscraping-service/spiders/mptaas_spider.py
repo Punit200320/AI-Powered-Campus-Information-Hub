@@ -1,10 +1,17 @@
+import os
+import sys
 import scrapy
+
+# Add parent directory to path so pipelines can be loaded regardless of CWD
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 
 class MptaasSpider(scrapy.Spider):
     name = "mptaas"
-    allowed_domains = ["tribal.mp.gov.in", "buddy4study.com"]
+    allowed_domains = ["tribal.mp.gov.in", "buddy4study.com", "shorturl.at"]
     start_urls = [
+        "https://www.tribal.mp.gov.in/CMS",
         "https://www.buddy4study.com/article/mp-scholarship",
         "https://www.tribal.mp.gov.in/mptaas",
     ]
@@ -21,8 +28,26 @@ class MptaasSpider(scrapy.Spider):
     }
 
     def parse(self, response):
+        # 1. Scrape live official notices & circulars from Tribal Affairs Department /CMS Popup Modal
+        if "tribal.mp.gov.in/cms" in response.url.lower():
+            anchors = response.css("a")
+            for a in anchors:
+                text = a.xpath("string(.)").get("").strip()
+                text = " ".join(text.split())
+                href = a.attrib.get("href", "").strip()
+                if text and any(kw in text for kw in ["सूचना", "शिक्षक", "परीक्षा", "प्रवेश", "सत्र", "eHRMS", "EMRS", "आदेश", "विशिष्ट"]):
+                    full_link = response.urljoin(href)
+                    yield {
+                        "title": f"MP Tribal - {text}",
+                        "provider": "Department of Tribal Affairs, Govt of MP",
+                        "amount": "Official Government Notice / PDF Circular",
+                        "deadline": "Active Session 2026-27",
+                        "eligibility": "Applicable for Tribal Affairs Beneficiaries / Candidates / Staff",
+                        "link": full_link,
+                    }
+
+        # 2. Parse MP Scholarship Table from Buddy4Study
         if "buddy4study.com" in response.url:
-            # Parse MP Scholarship Table from Buddy4Study
             tables = response.css("table")
             for table in tables:
                 rows = table.css("tr")
@@ -49,7 +74,7 @@ class MptaasSpider(scrapy.Spider):
                             "link": "https://www.tribal.mp.gov.in/mptaas",
                         }
 
-        # Yield verified core MPTAAS schemes to ensure high-fidelity data
+        # 3. Core verified MPTAAS schemes
         core_schemes = [
             {
                 "title": "MPTAAS Post Matric Scholarship Scheme for ST Students",
@@ -95,4 +120,3 @@ class MptaasSpider(scrapy.Spider):
 
         for s in core_schemes:
             yield s
-
