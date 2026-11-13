@@ -57,6 +57,7 @@ app.add_middleware(
 # Configuration
 # ---------------------------------------------------------------------------
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 _scraped_doc_cache = None
 try:
     _cache_dir = os.path.join(os.path.dirname(__file__), "_cache")
@@ -579,6 +580,46 @@ async def download_scraped_document(doc_id: str):
 # ---------------------------------------------------------------------------
 
 
+def _call_groq(messages: list, *, temperature: float = 0.7, max_tokens: int = 2048) -> Optional[str]:
+    """
+    Call Groq (OpenAI-compatible API). Returns assistant content or None.
+    Used as the PRIMARY live provider when GROQ_API_KEY is configured.
+    """
+    api_key = os.getenv("GROQ_API_KEY", "") or GROQ_API_KEY
+    if not api_key:
+        return None
+    groq_url = "https://api.groq.com/openai/v1/chat/completions"
+    models = [
+        "openai/gpt-oss-120b",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "meta-llama/llama-3.3-70b-versatile",
+    ]
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    for model in models:
+        try:
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+            resp = http_requests.post(groq_url, headers=headers, json=payload, timeout=25)
+            if resp.status_code == 200:
+                data = resp.json()
+                msg = data.get("choices", [{}])[0].get("message", {})
+                content = msg.get("content") or ""
+                if content and str(content).strip():
+                    print(f"[INFO] Groq Model {model} responded successfully")
+                    return str(content).strip()
+            else:
+                print(f"[WARN] Groq {model} returned {resp.status_code}: {resp.text[:120]}")
+                if resp.status_code in (401, 402, 403, 429):
+                    break
+        except Exception as exc:
+            print(f"[WARN] Groq {model} error: {exc}")
+    return None
+
+
 def _call_openrouter(messages: list, *, temperature: float = 0.7, max_tokens: int = 2048) -> Optional[str]:
     """
     Try each model in FALLBACK_MODELS until one succeeds.
@@ -649,7 +690,10 @@ def _call_gemini(prompt: str) -> Optional[str]:
 
 
 def _call_llm(messages: list, prompt_text: str = "", *, temperature: float = 0.7, max_tokens: int = 2048) -> Optional[str]:
-    """Try Gemini first, then fallback to OpenRouter free models."""
+    """Try Groq first, then Gemini, then OpenRouter free models."""
+    res = _call_groq(messages, temperature=temperature, max_tokens=max_tokens)
+    if res:
+        return res
     res = _call_gemini(prompt_text or (messages[-1].get("content", "") if messages else ""))
     if res:
         return res
