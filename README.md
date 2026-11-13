@@ -130,3 +130,14 @@ Double-click **`run_full_project.bat`** in the project root:
 
 ### 1-Click Multi-Spider Crawler
 Double-click **`run_all_spiders.bat`** to run all 7 scholarship and campus document scrapers in sequence.
+
+
+---
+
+## 🛠️ Built with Codvian — Mercury 3
+
+This project was developed with **Codvian**, the AI coding agent from Inception,
+running on the **Mercury 3** model. Codvian helped build and debug the microservices,
+web scraping engine, AI/OCR document summarization (including Hindi/Devanagari vision
+summaries), and Google Drive/Sheets integrations.
+

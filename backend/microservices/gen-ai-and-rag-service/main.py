@@ -30,6 +30,16 @@ from auth import get_current_user, get_optional_user
 
 load_dotenv()
 
+# Also load the shared config/.env (holds OPENROUTER_API_KEY etc.) so the
+# service works even when launched directly (not via run_all_backends.bat).
+_config_env_path = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "config", ".env"
+)
+if os.path.exists(_config_env_path):
+    # override=True: the service .env may contain an empty OPENROUTER_API_KEY,
+    # which would otherwise shadow the real key in config/.env.
+    load_dotenv(_config_env_path, override=True)
+
 # ---------------------------------------------------------------------------
 # App setup
 # ---------------------------------------------------------------------------
@@ -47,6 +57,16 @@ app.add_middleware(
 # Configuration
 # ---------------------------------------------------------------------------
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+_scraped_doc_cache = None
+try:
+    _cache_dir = os.path.join(os.path.dirname(__file__), "_cache")
+    _cache_f = os.path.join(_cache_dir, "scraped_docs.json")
+    if os.path.exists(_cache_f):
+        with io.open(_cache_f, encoding="utf-8") as fh:
+            _scraped_doc_cache = json.load(fh)
+except Exception:
+    _scraped_doc_cache = None
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
 CREDENTIALS_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "config", "credentials.json"
@@ -242,10 +262,89 @@ def _summarize_with_llm(text: str, max_len: int = 300) -> str:
     return " ".join(lines[:5])[:max_len]
 
 
-def _load_scraped_doc_summaries() -> list:
-    global _scraped_doc_cache
-    if _scraped_doc_cache is not None:
-        return _scraped_doc_cache
+def _summarize_pdf_with_vision(file_bytes: bytes, max_pages: int = 1) -> str:
+    """
+    Summarize a (mostly scanned/Hindi) PDF by rendering its pages to images and
+    sending them to a multimodal LLM via OpenRouter. This bypasses text-OCR,
+    which breaks on Devanagari scripts. Returns a summary string or "".
+    """
+    api_key = os.getenv("OPENROUTER_API_KEY", "") or OPENROUTER_API_KEY
+    if not api_key:
+        return ""
+    try:
+        import fitz  # pymupdf
+        import base64
+    except Exception:
+        return ""
+    vision_models = [
+        "qwen/qwen2.5-vl-72b-instruct",
+        "nvidia/nemotron-3.5-super-vl:free",
+    ]
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:5173",
+        "X-Title": "Campus AI Assistant",
+    }
+    try:
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+    except Exception as exc:
+        print(f"[WARN] vision: cannot open pdf: {exc}")
+        return ""
+    content_blocks = []
+    try:
+        for i, page in enumerate(doc):
+            if i >= max_pages:
+                break
+            pix = page.get_pixmap(dpi=150)
+            img_bytes = pix.tobytes("png")
+            b64 = base64.b64encode(img_bytes).decode()
+            content_blocks.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "data:image/png;base64," + b64},
+                }
+            )
+    finally:
+        doc.close()
+    if not content_blocks:
+        return ""
+    content_blocks.insert(
+        0,
+        {
+            "type": "text",
+            "text": (
+                "This is a government notice (may be in Hindi/Devanagari). "
+                "Summarize in English: what scheme/notice it is, eligibility, "
+                "benefits, key dates, and how to apply. 3-5 concise sentences."
+            ),
+        },
+    )
+    for model in vision_models:
+        try:
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": content_blocks}],
+                "max_tokens": 1200,
+            }
+            resp = http_requests.post(
+                OPENROUTER_URL, headers=headers, json=payload, timeout=90
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                msg = data.get("choices", [{}])[0].get("message", {})
+                content = msg.get("content") or msg.get("reasoning") or ""
+                if content and str(content).strip():
+                    print(f"[INFO] Vision model {model} summarized PDF")
+                    return str(content).strip()
+            else:
+                print(f"[WARN] Vision model {model} -> {resp.status_code}")
+        except Exception as exc:
+            print(f"[WARN] Vision model {model} error: {exc}")
+    return ""
+
+
+def _build_scraped_doc_summaries() -> list:
     results: list = []
     try:
         if not os.path.isdir(_SCRAPED_DOCS_DIR):
@@ -263,7 +362,15 @@ def _load_scraped_doc_summaries() -> list:
             text = _extract_text_from_pdf(data) or ""
             if not text.strip():
                 text = "Scraped document content not extractable."
-            summary = _summarize_with_llm(text)
+            # Only use vision for scanned documents (no usable text layer),
+            # e.g. Hindi notices. Files with real text go through the text LLM.
+            npages = _pdf_page_count(data) if data else 1
+            textlen = len(text.strip())
+            summary = ""
+            if textlen < 120 and npages <= 6:
+                summary = _summarize_pdf_with_vision(data)
+            if not summary and text.strip():
+                summary = _summarize_with_llm(text)
             base = os.path.splitext(fname)[0]
             results.append(
                 {
@@ -280,8 +387,39 @@ def _load_scraped_doc_summaries() -> list:
     except Exception as exc:
         print(f"[WARN] Scraped doc scan error: {exc}")
     _scraped_doc_cache = results
+    # Persist to disk so we don't re-run expensive OCR/vision on next startup.
+    try:
+        _cache_dir = os.path.join(os.path.dirname(__file__), "_cache")
+        os.makedirs(_cache_dir, exist_ok=True)
+        with io.open(os.path.join(_cache_dir, "scraped_docs.json"), "w", encoding="utf-8") as fh:
+            json.dump(results, fh, ensure_ascii=False)
+    except Exception:
+        pass
     return results
 
+
+def _load_scraped_doc_summaries() -> list:
+    global _scraped_doc_cache
+    if _scraped_doc_cache is not None:
+        return _scraped_doc_cache
+    # If a persisted snapshot exists, use it while the background refresh runs.
+    try:
+        _cache_f = os.path.join(os.path.dirname(__file__), "_cache", "scraped_docs.json")
+        if os.path.exists(_cache_f):
+            with io.open(_cache_f, encoding="utf-8") as fh:
+                _scraped_doc_cache = json.load(fh)
+    except Exception:
+        pass
+    # Populate lazily in background so the first request returns quickly.
+    try:
+        import threading
+        def _bg():
+            global _scraped_doc_cache
+            _scraped_doc_cache = _build_scraped_doc_summaries()
+        threading.Thread(target=_bg, daemon=True).start()
+    except Exception:
+        _scraped_doc_cache = _build_scraped_doc_summaries()
+    return _scraped_doc_cache or []
 
 def invalidate_scraped_doc_cache():
     global _scraped_doc_cache
@@ -342,7 +480,7 @@ def _call_openrouter(messages: list, *, temperature: float = 0.7, max_tokens: in
                 "max_tokens": max_tokens,
             }
             resp = http_requests.post(
-                OPENROUTER_URL, headers=headers, json=payload, timeout=25
+                OPENROUTER_URL, headers=headers, json=payload, timeout=12
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -353,6 +491,10 @@ def _call_openrouter(messages: list, *, temperature: float = 0.7, max_tokens: in
                     return str(content).strip()
             else:
                 print(f"[WARN] Model {model} returned {resp.status_code}: {resp.text[:120]}")
+                # Rate limit or 4xx will apply to every free model; don't waste
+                # time trying the rest of the fallback chain.
+                if resp.status_code in (401, 402, 429):
+                    break
         except Exception as exc:
             print(f"[WARN] Model {model} error: {exc}")
 
