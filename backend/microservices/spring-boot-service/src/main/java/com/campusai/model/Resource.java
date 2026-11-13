@@ -38,6 +38,12 @@ public class Resource {
     private String vectorId;
     private String driveUrl;
     private String driveFolderId;
+    private String storagePath;
+    private String driveFileId;
+    private Boolean driveStored = false;
+    @Lob
+    private String fullText;
+    private String summary;
 
     public Resource() {}
 
@@ -89,5 +95,15 @@ public class Resource {
     public void setDriveUrl(String driveUrl) { this.driveUrl = driveUrl; }
     public String getDriveFolderId() { return driveFolderId; }
     public void setDriveFolderId(String driveFolderId) { this.driveFolderId = driveFolderId; }
+    public String getStoragePath() { return storagePath; }
+    public void setStoragePath(String storagePath) { this.storagePath = storagePath; }
+    public String getDriveFileId() { return driveFileId; }
+    public void setDriveFileId(String driveFileId) { this.driveFileId = driveFileId; }
+    public Boolean getDriveStored() { return driveStored; }
+    public void setDriveStored(Boolean driveStored) { this.driveStored = driveStored; }
+    public String getFullText() { return fullText; }
+    public void setFullText(String fullText) { this.fullText = fullText; }
+    public String getSummary() { return summary; }
+    public void setSummary(String summary) { this.summary = summary; }
 }
 

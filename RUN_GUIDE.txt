@@ -1,0 +1,51 @@
+============================================================
+ AI-Powered Campus Information Hub - RUN GUIDE (after changes)
+============================================================
+
+Why nothing changed yet: the running Spring Boot + FastAPI are still
+OLD processes. The new code is in the source files but the servers
+were not rebuilt/restarted.
+
+------------------------------------------------------------
+ 1) SPRING BOOT - rebuild + restart (REQUIRED)
+------------------------------------------------------------
+Open a NEW Command Prompt and run:
+
+  cd /d C:\Users\DELL\Desktop\New_Project\backend\microservices\spring-boot-service
+  "C:\Maven\apache-maven-3.9.16\bin\mvn.cmd" -q clean package
+  "C:\Maven\apache-maven-3.9.16\bin\mvn.cmd" spring-boot:run
+
+* First build downloads new Google Drive dependencies (needs internet, a few min).
+* Keep this window open (it is the backend).
+
+------------------------------------------------------------
+ 2) FASTAPI - restart (REQUIRED)
+------------------------------------------------------------
+Stop the old FastAPI process (the one on port 8000), then start again,
+e.g. with the same command you normally use:
+
+  cd /d C:\Users\DELL\Desktop\New_Project\backend\microservices\gen-ai-and-rag-service
+  C:\Users\DELL\Desktop\Scrapy\.venv\Scripts\python.exe -m uvicorn main:app --port 8000
+
+------------------------------------------------------------
+ 3) GOOGLE DRIVE - folders must be shared with the service account
+------------------------------------------------------------
+Service account email:  drive-bot@carbon-bonsai-402618.iam.gserviceaccount.com
+Share these 4 folders with it as Editor:
+  - PYQ:        1ZcOtCA2XA_Rw1khE3ppht_TeipqzcQ1x
+  - Notices:    1mqB0PDUZfZeTakC0rkKZ-ZmyfNLhKl4q
+  - Notes:      17K7qVk7_1LgSACWtp58WsgdTaTLYnOSw
+  - Brochures:  1xeX6Up5WTWc2LU2haBeo2boxAO28Ncsh
+(Drive access is already verified working; this just lets uploads land there.)
+
+------------------------------------------------------------
+ 4) FRONTEND - hard refresh
+------------------------------------------------------------
+Open http://localhost:5173 and do Ctrl+Shift+R (hard reload).
+
+------------------------------------------------------------
+ 5) Verify
+------------------------------------------------------------
+After backend restarts, upload a small file from the site. Check:
+  - Upload succeeds (no "Upload failed").
+  - In the response/DB, driveStored=true when Drive upload worked.

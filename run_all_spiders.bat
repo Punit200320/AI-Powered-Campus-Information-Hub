@@ -60,4 +60,7 @@ echo.
 echo ========================================================
 echo All 9 Scrapers Completed! Database & Google Sheets Synced.
 echo ========================================================
-pause
+if not "%1"=="--no-pause" (
+    if "%CI%"=="" if "%AUTOMATED%"=="" timeout /t 3 >nul 2>&1
+)
+

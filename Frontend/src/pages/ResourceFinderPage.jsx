@@ -46,12 +46,17 @@ export const ResourceFinderPage = () => {
   const [uploadDept, setUploadDept] = useState('Computer Science');
   const [uploadSemester, setUploadSemester] = useState('Semester 5');
   const [uploadSubject, setUploadSubject] = useState('');
+  const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!uploadTitle.trim()) {
       toast.error('Please enter a document title');
+      return;
+    }
+    if (!uploadFile) {
+      toast.error('Please select a PDF or text file to attach');
       return;
     }
     setUploading(true);
@@ -64,7 +69,7 @@ export const ResourceFinderPage = () => {
         subject: uploadSubject || 'General',
         description: `${uploadCategory} for ${uploadDept} (${uploadSemester})`,
         uploadedBy: 'Student Contributor',
-      });
+      }, uploadFile);
       if (res.resource) {
         setResources((prev) => [res.resource, ...prev]);
       }
@@ -531,6 +536,18 @@ export const ResourceFinderPage = () => {
               onChange={(e) => setUploadTitle(e.target.value)}
               placeholder="e.g. Operating Systems End-Sem PYQ 2025"
               className="w-full glass-input rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Document File (PDF / text) *
+            </label>
+            <input
+              type="file"
+              accept=".pdf,.txt,application/pdf,text/plain"
+              onChange={(e) => setUploadFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+              className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:rounded-xl file:border-0 file:bg-primary-500/15 file:px-3.5 file:py-2 file:text-xs file:font-semibold file:text-primary-600 dark:file:text-primary-300"
             />
           </div>
 

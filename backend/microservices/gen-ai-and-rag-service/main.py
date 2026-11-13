@@ -206,6 +206,112 @@ def invalidate_scholarship_cache():
 
 
 # ---------------------------------------------------------------------------
+# Scraped scholarship documents -> summaries (notices, brochures, PDFs)
+# ---------------------------------------------------------------------------
+_scraped_doc_cache: Optional[list] = None
+_SCRAPED_DOCS_DIR = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "storage", "documents"
+)
+
+
+def _summarize_with_llm(text: str, max_len: int = 300) -> str:
+    if text is None or not str(text).strip():
+        return ""
+    snippet = str(text).strip()
+    if len(snippet) > 6000:
+        snippet = snippet[:6000]
+    try:
+        reply = _call_llm(
+            [
+                {
+                    "role": "system",
+                    "content": "You summarize official scholarship notices and brochures "
+                    "for students. Return a concise 3-5 sentence summary covering: what "
+                    "the scheme is, eligibility, benefits, key dates, how to apply.",
+                },
+                {"role": "user", "content": snippet},
+            ],
+            snippet,
+            max_tokens=max_len,
+        )
+        if reply:
+            return reply.strip()
+    except Exception:
+        pass
+    lines = [ln.strip() for ln in snippet.splitlines() if ln.strip()]
+    return " ".join(lines[:5])[:max_len]
+
+
+def _load_scraped_doc_summaries() -> list:
+    global _scraped_doc_cache
+    if _scraped_doc_cache is not None:
+        return _scraped_doc_cache
+    results: list = []
+    try:
+        if not os.path.isdir(_SCRAPED_DOCS_DIR):
+            _scraped_doc_cache = results
+            return results
+        for fname in sorted(os.listdir(_SCRAPED_DOCS_DIR)):
+            if not fname.lower().endswith(".pdf"):
+                continue
+            fpath = os.path.join(_SCRAPED_DOCS_DIR, fname)
+            try:
+                with open(fpath, "rb") as fh:
+                    data = fh.read()
+            except Exception:
+                continue
+            text = _extract_text_from_pdf(data) or ""
+            if not text.strip():
+                text = "Scraped document content not extractable."
+            summary = _summarize_with_llm(text)
+            base = os.path.splitext(fname)[0]
+            results.append(
+                {
+                    "id": base,
+                    "title": base.replace("_", " ").title(),
+                    "category": "Scholarship Notice / Brochure",
+                    "fileType": "PDF",
+                    "pages": _pdf_page_count(data) if data else 1,
+                    "summary": summary or text[:250],
+                    "source": fname,
+                    "downloadPath": "/api/v1/scholarships/documents/{0}/download".format(base),
+                }
+            )
+    except Exception as exc:
+        print(f"[WARN] Scraped doc scan error: {exc}")
+    _scraped_doc_cache = results
+    return results
+
+
+def invalidate_scraped_doc_cache():
+    global _scraped_doc_cache
+    _scraped_doc_cache = None
+
+
+class ScrapedDocResponse(BaseModel):
+    count: int = 0
+    documents: list = Field(default_factory=list)
+
+
+@app.get("/api/v1/scholarships/documents", response_model=ScrapedDocResponse)
+async def list_scraped_documents():
+    docs = _load_scraped_doc_summaries()
+    return ScrapedDocResponse(count=len(docs), documents=docs)
+
+
+@app.get("/api/v1/scholarships/documents/{doc_id}/download")
+async def download_scraped_document(doc_id: str):
+    if not os.path.isdir(_SCRAPED_DOCS_DIR):
+        raise HTTPException(status_code=404, detail="Not found")
+    for c in (doc_id + ".pdf", doc_id + ".PDF"):
+        fp = os.path.join(_SCRAPED_DOCS_DIR, c)
+        if os.path.exists(fp):
+            from fastapi.responses import FileResponse
+            return FileResponse(fp, media_type="application/pdf", filename=c)
+    raise HTTPException(status_code=404, detail="Not found")
+
+
+# ---------------------------------------------------------------------------
 # OpenRouter helper with fallback chain
 # ---------------------------------------------------------------------------
 
@@ -321,7 +427,7 @@ def _parse_json_from_llm(text: str) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 
 def _extract_text_from_pdf(file_bytes: bytes) -> str:
-    """Extract text from a PDF using pypdf."""
+    """Extract text from a PDF using pypdf, falling back to OCR (RapidOCR) for scanned PDFs."""
     try:
         from pypdf import PdfReader
         import io
@@ -332,9 +438,67 @@ def _extract_text_from_pdf(file_bytes: bytes) -> str:
             text = page.extract_text()
             if text:
                 pages.append(text)
-        return "\n\n".join(pages)
+        joined = "\n\n".join(pages)
+        # If pypdf extracted nothing meaningful, fall back to OCR for scanned PDFs.
+        if len(joined.strip()) < 20:
+            ocr_text = _ocr_extract_pdf(file_bytes)
+            if ocr_text and len(ocr_text.strip()) > len(joined.strip()):
+                return ocr_text
+        return joined
     except Exception as exc:
         print(f"[WARN] PDF extraction error: {exc}")
+        try:
+            ocr_text = _ocr_extract_pdf(file_bytes)
+            if ocr_text:
+                return ocr_text
+        except Exception as ocr_exc:
+            print(f"[WARN] OCR extraction error: {ocr_exc}")
+        return ""
+
+
+def _pdf_page_count(file_bytes: bytes) -> int:
+    """Count pages in a PDF using pypdf."""
+    try:
+        from pypdf import PdfReader
+        import io
+        reader = PdfReader(io.BytesIO(file_bytes))
+        return max(1, len(reader.pages))
+    except Exception:
+        return 1
+def _ocr_extract_pdf(file_bytes: bytes) -> str:
+    """Run OCR on a PDF's pages using RapidOCR (onnxruntime), fallback-safe."""
+    try:
+        import fitz  # pymupdf
+        from rapidocr_onnxruntime import RapidOCR
+    except Exception:
+        return ""
+    try:
+        ocr = RapidOCR()
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        texts = []
+        for page in doc:
+            pix = page.get_pixmap(dpi=200)
+            img_bytes = pix.tobytes("png")
+            import tempfile, os
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                tmp.write(img_bytes)
+                tmp_path = tmp.name
+            try:
+                result, _ = ocr(tmp_path)
+                if result:
+                    for line in result:
+                        if isinstance(line, (tuple, list)) and len(line) >= 2:
+                            texts.append(str(line[1]))
+            finally:
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
+            if len("\n".join(texts)) > 4000:  # cap OCR work
+                break
+        return "\n".join(texts)
+    except Exception as exc:
+        print(f"[WARN] OCR fallback failed: {exc}")
         return ""
 
 
@@ -371,6 +535,19 @@ async def chat_generate(req: ChatRequest, user: Optional[dict] = Depends(get_opt
             if not context_chunks:
                 for idx, row in enumerate(scholarships[:10]):
                     context_chunks.append(json.dumps(row, ensure_ascii=False))
+
+        # Also include summarized scraped scholarship documents (notices/brochures)
+        try:
+            scraped_docs = _load_scraped_doc_summaries()
+            if scraped_docs:
+                doc_chunk = "\n".join(
+                    "{0}: {1}".format(d.get("title", "Notice"), d.get("summary", ""))
+                    for d in scraped_docs[:8]
+                )
+                if doc_chunk.strip():
+                    context_chunks.append("[Scraped Scholarship Documents]\n" + doc_chunk)
+        except Exception:
+            pass
 
         rag_context = "\n".join(context_chunks[:15])  # cap to avoid token overflow
 
