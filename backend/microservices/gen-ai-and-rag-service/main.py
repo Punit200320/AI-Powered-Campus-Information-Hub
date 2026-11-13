@@ -262,6 +262,56 @@ def _summarize_with_llm(text: str, max_len: int = 300) -> str:
     return " ".join(lines[:5])[:max_len]
 
 
+def _clean_vision_summary(raw: str) -> str:
+    """Strip chain-of-thought scaffolding from a vision model response so the
+    stored summary is the final polished answer, not the model's reasoning."""
+    txt = raw.strip()
+    if not txt:
+        return txt
+    # Common trailing "final answer" markers - use the LAST, richest one.
+    markers = [
+        "Final Polish:",
+        "Final Answer:",
+        "Final summary:",
+        "Summary:",
+        "Result:",
+        "Answer:",
+        "The notice ",
+        "This notice ",
+        "This is a notice ",
+    ]
+    best = None
+    for m in markers:
+        idx = txt.rfind(m)
+        if idx != -1:
+            cand = txt[idx + len(m):].strip()
+            cand = cand.strip(": -")
+            if len(cand) >= 30:
+                best = cand if best is None or len(cand) > len(best) else best
+    if best:
+        txt = best
+    # Drop any remaining numbered thought-outline lines (e.g. "1. Analyze ...").
+    lines = txt.splitlines()
+    cleaned = []
+    skip = True
+    for ln in lines:
+        st = ln.strip()
+        if not st:
+            continue
+        # Stop at the first line that looks like the actual polished summary.
+        if skip and (st[0].isdigit() and ". " in st[:4]):
+            continue
+        if skip and st.lower().startswith(("**", "step ", "draft ", "check ", "refine ")):
+            continue
+        skip = False
+        cleaned.append(st)
+    txt = " ".join(cleaned).strip()
+    # Caps at a reasonable size for a 3-5 sentence summary.
+    if len(txt) > 700:
+        txt = txt[:700].rsplit(" ", 1)[0] + "..."
+    return txt
+
+
 def _summarize_pdf_with_vision(file_bytes: bytes, max_pages: int = 1) -> str:
     """
     Summarize a (mostly scanned/Hindi) PDF by rendering its pages to images and
@@ -327,7 +377,10 @@ def _summarize_pdf_with_vision(file_bytes: bytes, max_pages: int = 1) -> str:
             "text": (
                 "This is a government notice (may be in Hindi/Devanagari). "
                 "Summarize in English: what scheme/notice it is, eligibility, "
-                "benefits, key dates, and how to apply. 3-5 concise sentences."
+                "benefits, key dates, and how to apply. "
+                "Output ONLY the finished summary, 3-5 concise sentences. "
+                "Do NOT include analysis, reasoning, numbered steps, or any "
+                "explanation of how you arrived at the summary."
             ),
         },
     )
@@ -382,8 +435,9 @@ def _summarize_pdf_with_vision(file_bytes: bytes, max_pages: int = 1) -> str:
                 msg = data.get("choices", [{}])[0].get("message", {})
                 content = msg.get("content") or msg.get("reasoning") or ""
                 if content and str(content).strip():
+                    summary = _clean_vision_summary(str(content))
                     print(f"[INFO] Vision model {model} summarized PDF")
-                    return str(content).strip()
+                    return summary
             if resp is not None and resp.status_code != 200:
                 print(f"[WARN] Vision model {model} -> {resp.status_code}")
         except Exception as exc:
@@ -392,6 +446,20 @@ def _summarize_pdf_with_vision(file_bytes: bytes, max_pages: int = 1) -> str:
 
 
 def _build_scraped_doc_summaries() -> list:
+    # Load any previously persisted summaries so we can reuse them and avoid
+    # re-invoking the vision/text LLMs for documents that already have a good
+    # summary. Falls back to {} if the file is missing/corrupt.
+    _prev_summaries = {}
+    try:
+        _prev_f = os.path.join(os.path.dirname(__file__), "_cache", "scraped_docs.json")
+        if os.path.exists(_prev_f):
+            with io.open(_prev_f, encoding="utf-8") as fh:
+                for entry in json.load(fh):
+                    src = entry.get("source")
+                    if src and entry.get("summary"):
+                        _prev_summaries[src] = entry["summary"]
+    except Exception:
+        pass
     results: list = []
     try:
         if not os.path.isdir(_SCRAPED_DOCS_DIR):
@@ -414,7 +482,17 @@ def _build_scraped_doc_summaries() -> list:
             npages = _pdf_page_count(data) if data else 1
             textlen = len(text.strip())
             summary = ""
-            if textlen < 120 and npages <= 6:
+            # REUSE an already-computed summary from the persisted snapshot so we
+            # do not hammer the API on every refresh. This is the key fix that
+            # stops free-quota exhaustion and connection-pool retry failures.
+            if _prev_summaries is not None:
+                prev = _prev_summaries.get(fname)
+                if prev and len(str(prev).strip()) > 80:
+                    if not (str(prev).strip().startswith("**1.")
+                            or "1. Analyze the Image" in str(prev)
+                            or str(prev).strip().lower().startswith("**1.")):
+                        summary = str(prev).strip()
+            if not summary and textlen < 120 and npages <= 6:
                 summary = _summarize_pdf_with_vision(data)
             if not summary and text.strip():
                 summary = _summarize_with_llm(text)
