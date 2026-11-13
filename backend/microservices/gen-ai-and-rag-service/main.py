@@ -276,10 +276,18 @@ def _summarize_pdf_with_vision(file_bytes: bytes, max_pages: int = 1) -> str:
         import base64
     except Exception:
         return ""
-    vision_models = [
-        "qwen/qwen2.5-vl-72b-instruct",
-        "nvidia/nemotron-3.5-super-vl:free",
-    ]
+    # Model order can be overridden with VISION_MODELS env (comma separated).
+    # Paid qwen is first (cheap, ~$0.002/doc) so it works even when free tier
+    # rate-limit (429) is exhausted.
+    _env_models = (os.getenv("VISION_MODELS") or "").strip()
+    if _env_models:
+        vision_models = [m.strip() for m in _env_models.split(",") if m.strip()]
+    else:
+        vision_models = [
+            "qwen/qwen2.5-vl-72b-instruct",
+            "google/gemini-2.5-flash",
+            "nvidia/nemotron-3.5-super-vl:free",
+        ]
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -339,6 +347,11 @@ def _summarize_pdf_with_vision(file_bytes: bytes, max_pages: int = 1) -> str:
                     return str(content).strip()
             else:
                 print(f"[WARN] Vision model {model} -> {resp.status_code}")
+                # Add 10 credits to OpenRouter to unlock paid models / more
+                # free requests. 429 (rate limit) is the main blocker.
+                if resp.status_code == 429:
+                    import time as _time
+                    _time.sleep(3)
         except Exception as exc:
             print(f"[WARN] Vision model {model} error: {exc}")
     return ""
