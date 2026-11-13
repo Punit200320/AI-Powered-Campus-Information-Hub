@@ -45,6 +45,16 @@ if os.path.exists(_config_env_path):
 # ---------------------------------------------------------------------------
 app = FastAPI(title="Campus AI Service", version="1.0.0")
 
+@app.on_event("startup")
+def _warm_scraped_doc_cache():
+    """Pre-build the scraped-doc summary cache in the background at startup
+    so the first /api/v1/scholarships/documents request serves data immediately."""
+    try:
+        import threading
+        threading.Thread(target=_load_scraped_doc_summaries, daemon=True).start()
+    except Exception as e:
+        print(f"[WARN] startup warm-up failed: {e}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -493,10 +503,14 @@ def _build_scraped_doc_summaries() -> list:
                             or "1. Analyze the Image" in str(prev)
                             or str(prev).strip().lower().startswith("**1.")):
                         summary = str(prev).strip()
-            if not summary and textlen < 120 and npages <= 6:
-                summary = _summarize_pdf_with_vision(data)
+            # Prefer the text LLM (Groq) first wherever extractable text exists,
+            # including OCR text. Vision is only a last-resort for scanned docs
+            # whose OCR produced no meaningful text, and is time-boxed to avoid
+            # hanging on rate-limited free models.
             if not summary and text.strip():
                 summary = _summarize_with_llm(text)
+            if not summary and textlen < 120 and npages <= 6:
+                summary = _summarize_pdf_with_vision(data)
             base = os.path.splitext(fname)[0]
             results.append(
                 {
@@ -519,8 +533,8 @@ def _build_scraped_doc_summaries() -> list:
         os.makedirs(_cache_dir, exist_ok=True)
         with io.open(os.path.join(_cache_dir, "scraped_docs.json"), "w", encoding="utf-8") as fh:
             json.dump(results, fh, ensure_ascii=False)
-    except Exception:
-        pass
+    except Exception as persist_exc:
+        print(f"[WARN] Could not persist scraped-doc cache: {persist_exc}")
     return results
 
 
