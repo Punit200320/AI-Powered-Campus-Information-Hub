@@ -482,10 +482,10 @@ export const ScholarshipsHubPage = () => {
                         <button
                           onClick={() => handleDownload(doc)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors"
-                          title={`Download Full Official PDF (${doc.pages || 24} Pages)`}
+                          title={`Download Full Official PDF${doc.pages ? ` (${doc.pages} Pages)` : ''}`}
                         >
                           <Download className="w-3.5 h-3.5" />
-                          <span>Download PDF ({doc.pages || 24}P)</span>
+                          <span>Download PDF{doc.pages ? ` (${doc.pages}P)` : ''}</span>
                         </button>
                       </div>
                     </div>
@@ -511,8 +511,8 @@ export const ScholarshipsHubPage = () => {
                           <HardDrive className="w-3 h-3 text-emerald-500" />
                           <span>Campus Drive Sync</span>
                         </span>
-                        <span>{doc.fileSize || '4.2 MB'}</span>
-                        <span>{doc.pages || 24} pages</span>
+                        <span>{doc.fileSize || 'PDF'}</span>
+                        <span>{doc.pages ? `${doc.pages} pages` : ''}</span>
                       </div>
                       <span className="font-medium text-emerald-600 dark:text-emerald-400">
                         {doc.downloads || 120} downloads
@@ -793,7 +793,7 @@ export const ScholarshipsHubPage = () => {
               {/* Footer */}
               <div className="p-4 sm:p-6 border-t border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between gap-3 shrink-0">
                 <div className="text-xs text-slate-500 flex items-center gap-1">
-                  <span>Authentic Full Document ({previewDoc.pages || 24} Pages)</span>
+                  <span>Authentic Full Document{previewDoc.pages ? ` (${previewDoc.pages} Pages)` : ''}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
