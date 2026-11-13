@@ -55,7 +55,7 @@ export const LandingPage = () => {
                 Campus<span className="text-primary-500">AI</span>
               </span>
               <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400">
-                Next-Gen Academic OS
+                Campus study companion
               </span>
             </div>
           </Link>
@@ -99,6 +99,14 @@ export const LandingPage = () => {
 
       {/* Hero Section */}
       <section className="relative z-10 pt-16 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
+        {/* Campus background photo */}
+        <div className="absolute inset-0 -z-10 pointer-events-none">
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-25 dark:opacity-20"
+            style={{ backgroundImage: "url(/assets/campus-bg.webp)" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white dark:to-dark-bg" />
+        </div>
         <motion.div
           variants={staggerContainer(0.12, 0.1)}
           initial="initial"
@@ -109,17 +117,17 @@ export const LandingPage = () => {
           <motion.div variants={fadeInUp}>
             <Badge variant="indigo" size="lg" className="mb-6 px-4 py-1.5 shadow-sm border-primary-500/30">
               <Sparkles className="w-4 h-4 mr-2 text-primary-500 animate-pulse" />
-              Powered by Gemini LLM & Qdrant Vector RAG
+              Built around your coursework, notes & questions
             </Badge>
           </motion.div>
 
           {/* Headline */}
           <motion.h1
             variants={fadeInUp}
-            className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.12]"
+            className="font-display text-5xl sm:text-6xl lg:text-7xl text-slate-900 dark:text-white leading-[1.08]"
           >
-            Your Intelligent{' '}
-            <span className="gradient-text-primary">Campus Companion</span>
+            Study smarter, not harder —{' '}
+            <span className="gradient-text-primary">on and around campus</span>
           </motion.h1>
 
           {/* Subtitle */}
@@ -127,7 +135,7 @@ export const LandingPage = () => {
             variants={fadeInUp}
             className="mt-6 text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed"
           >
-            Instant answers with verified citations from your syllabus, smart search across lecture notes and PYQs, automated document summarization, and AI-personalized study roadmaps.
+            CampusAI gathers your lecture notes, PYQs and notices into one calm place — answers your questions with cited sources, summarises documents, and helps you plan your study week without the overwhelm.
           </motion.p>
 
           {/* CTAs */}
@@ -380,7 +388,7 @@ export const LandingPage = () => {
             Comprehensive Academic Suite
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Engineered for Campus Excellence
+            Made for how students actually study
           </h2>
           <p className="mt-4 text-slate-600 dark:text-slate-400 text-base">
             Every feature is calibrated to help students understand concepts deeply, prepare for exams without panic, and stay ahead of academic requirements.
@@ -469,7 +477,7 @@ export const LandingPage = () => {
             Workflow Architecture
           </Badge>
           <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">
-            How CampusAI Works
+            How it fits into your week
           </h2>
         </div>
 
@@ -519,7 +527,7 @@ export const LandingPage = () => {
             Engineered For Scale
           </Badge>
           <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">
-            Modern Full-Stack Architecture
+            What's under the hood
           </h2>
         </div>
 
@@ -543,7 +551,7 @@ export const LandingPage = () => {
           </div>
 
           <div className="p-4 rounded-2xl glass-card border border-slate-200 dark:border-white/10 flex flex-col items-center gap-2">
-            <Database className="w-6 h-6 text-rose-500" />
+            <Database className="w-6 h-6 text-secondary-500" />
             <span className="font-bold text-sm text-slate-800 dark:text-white">Qdrant Vector DB</span>
             <span className="text-[11px] text-slate-400">Semantic embeddings</span>
           </div>
@@ -605,7 +613,7 @@ export const LandingPage = () => {
         <div className="p-10 rounded-3xl bg-gradient-to-tr from-primary-600 via-secondary-600 to-electric-cyan text-white shadow-2xl relative overflow-hidden">
           <div className="relative z-10 max-w-2xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-              Ready to Accelerate Your Academic Journey?
+              Ready to find a calmer way to study?
             </h2>
             <p className="mt-4 text-white/80 text-sm sm:text-base">
               Join thousands of students and campus members leveraging intelligent automation today.
@@ -644,4 +652,3 @@ export const LandingPage = () => {
 };
 
 export default LandingPage;
-

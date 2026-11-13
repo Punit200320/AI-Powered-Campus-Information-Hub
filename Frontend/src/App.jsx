@@ -12,13 +12,14 @@ export function App() {
       <AuthProvider>
         <BookmarkProvider>
           <BrowserRouter>
+            <div className="noise-overlay" aria-hidden="true" />
             <AppRoutes />
             <Toaster
               position="top-right"
               toastOptions={{
                 duration: 3500,
                 style: {
-                  background: '#0f172a',
+                  background: '#151b2e',
                   color: '#f8fafc',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '16px',
@@ -49,4 +50,3 @@ export function App() {
 }
 
 export default App;
-

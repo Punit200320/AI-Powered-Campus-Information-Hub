@@ -388,7 +388,7 @@ export const MOCK_RECOMMENDED_TOPICS = [
     subject: 'Operating Systems',
     confidence: '54% Mastery',
     priority: 'Critical Focus',
-    color: 'from-rose-500/20 to-red-500/20 border-rose-500/30 text-rose-400',
+    color: 'from-secondary-500/20 to-amber-500/20 border-secondary-500/30 text-secondary-500',
     actionText: 'Review Notes & Quiz',
   },
   {
@@ -404,7 +404,7 @@ export const MOCK_RECOMMENDED_TOPICS = [
     subject: 'DBMS',
     confidence: '61% Mastery',
     priority: 'Needs Review',
-    color: 'from-indigo-500/20 to-purple-500/20 border-indigo-500/30 text-indigo-400',
+    color: 'from-primary-500/20 to-teal-500/20 border-primary-500/30 text-primary-500',
     actionText: 'Study Flashcards',
   },
 ];

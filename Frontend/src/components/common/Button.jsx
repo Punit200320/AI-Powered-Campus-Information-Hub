@@ -16,13 +16,13 @@ export const Button = ({
   type = 'button',
   ...props
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 select-none relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none rounded-xl';
+  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 select-none relative overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-dark-bg disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none rounded-xl active:scale-[0.98]';
 
   const variants = {
     primary:
-      'bg-gradient-to-r from-primary-600 via-primary-500 to-secondary-600 hover:from-primary-500 hover:to-secondary-500 text-white shadow-lg shadow-primary-500/25 border border-primary-400/20',
+      'bg-gradient-to-br from-primary-700 to-secondary-600 text-white shadow-md shadow-primary-600/20 hover:shadow-lg hover:shadow-primary-600/30 hover:brightness-[1.04] border border-white/10',
     secondary:
-      'bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-dark-card dark:hover:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 shadow-sm',
+      'bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-dark-card dark:hover:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 shadow-sm hover:shadow',
     outline:
       'border border-primary-500/30 text-primary-600 dark:text-primary-400 hover:bg-primary-500/10 dark:hover:bg-primary-500/15',
     ghost:
@@ -41,10 +41,8 @@ export const Button = ({
 
   return (
     <motion.button
+      whileTap={disabled || isLoading ? undefined : { scale: 0.97 }}
       type={type}
-      whileHover={!disabled && !isLoading ? { scale: 1.015, y: -1 } : {}}
-      whileTap={!disabled && !isLoading ? { scale: 0.985 } : {}}
-      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       disabled={disabled || isLoading}
       onClick={onClick}
       className={cn(baseStyles, variants[variant], sizes[size], className)}
@@ -64,4 +62,3 @@ export const Button = ({
 };
 
 export default Button;
-

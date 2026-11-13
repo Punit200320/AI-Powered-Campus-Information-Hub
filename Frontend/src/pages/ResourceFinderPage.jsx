@@ -217,14 +217,14 @@ export const ResourceFinderPage = () => {
             onClick={() => setCategory('Lecture Notes')}
             className={`flex items-center gap-2.5 p-3 rounded-2xl glass-card border text-left transition-all ${
               category === 'Lecture Notes'
-                ? 'border-purple-500 ring-2 ring-purple-500/30 bg-purple-50/50 dark:bg-purple-900/20'
-                : 'border-purple-500/20 hover:border-purple-500/50'
+                ? 'border-primary-500 ring-2 ring-primary-500/30 bg-primary-50/50 dark:bg-primary-950/30'
+                : 'border-primary-500/20 hover:border-primary-500/50'
             }`}
           >
             <span className="text-2xl">📚</span>
             <div>
               <div className="text-xs font-bold text-slate-900 dark:text-white">Lecture Notes</div>
-              <div className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Verified Faculty Notes</div>
+              <div className="text-[10px] text-primary-600 dark:text-primary-400 font-medium">Verified Faculty Notes</div>
             </div>
           </button>
 
