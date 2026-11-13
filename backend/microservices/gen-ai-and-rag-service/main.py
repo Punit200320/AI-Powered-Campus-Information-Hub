@@ -284,9 +284,12 @@ def _summarize_pdf_with_vision(file_bytes: bytes, max_pages: int = 1) -> str:
         vision_models = [m.strip() for m in _env_models.split(",") if m.strip()]
     else:
         vision_models = [
-            "qwen/qwen2.5-vl-72b-instruct",
-            "google/gemini-2.5-flash",
+            # Free vision (multimodal) models on OpenRouter only.
             "nvidia/nemotron-3.5-super-vl:free",
+            "google/gemma-4-31b-it:free",
+            "google/gemma-4-26b-a4b-it:free",
+            "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+            "thinkingmachines/inkling-2-small:free",
         ]
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -335,23 +338,54 @@ def _summarize_pdf_with_vision(file_bytes: bytes, max_pages: int = 1) -> str:
                 "messages": [{"role": "user", "content": content_blocks}],
                 "max_tokens": 1200,
             }
-            resp = http_requests.post(
-                OPENROUTER_URL, headers=headers, json=payload, timeout=90
-            )
-            if resp.status_code == 200:
+            # Retry each model with exponential backoff on transient
+            # failures (429 rate-limit and 5xx server errors). This retries
+            # the *same* request, unlike a single fixed sleep.
+            attempt = 0
+            resp = None
+            keep_trying = True
+            while keep_trying and attempt < 4:
+                resp = http_requests.post(
+                    OPENROUTER_URL, headers=headers, json=payload, timeout=90
+                )
+                if resp.status_code in (200, 400, 401, 402, 403, 404, 422):
+                    keep_trying = False
+                elif resp.status_code == 429:
+                    # Daily free-tier quota exhausted (persistent) vs a brief
+                    # spike: a 429 that stays after backoff needs credits.
+                    attempt += 1
+                    if attempt >= 4:
+                        print(
+                            "[WARN] Vision model %s -> persistent 429 "
+                            "(free-models-per-day). Add OpenRouter credits "
+                            "(https://openrouter.ai/settings/credits) so paid "
+                            "models (e.g. qwen) are usable; falling back." % model
+                        )
+                        keep_trying = False
+                    else:
+                        sleep_s = 2 ** attempt  # 2s,4s,8s
+                        print(
+                            "[WARN] Vision model %s -> 429, retry %d/4 in %ds"
+                            % (model, attempt, sleep_s)
+                        )
+                        import time as _time
+                        _time.sleep(sleep_s)
+                else:  # 5xx or other -> backoff retry
+                    attempt += 1
+                    if attempt >= 4:
+                        keep_trying = False
+                    else:
+                        import time as _time
+                        _time.sleep(2 ** (attempt - 1))
+            if resp is not None and resp.status_code == 200:
                 data = resp.json()
                 msg = data.get("choices", [{}])[0].get("message", {})
                 content = msg.get("content") or msg.get("reasoning") or ""
                 if content and str(content).strip():
                     print(f"[INFO] Vision model {model} summarized PDF")
                     return str(content).strip()
-            else:
+            if resp is not None and resp.status_code != 200:
                 print(f"[WARN] Vision model {model} -> {resp.status_code}")
-                # Add 10 credits to OpenRouter to unlock paid models / more
-                # free requests. 429 (rate limit) is the main blocker.
-                if resp.status_code == 429:
-                    import time as _time
-                    _time.sleep(3)
         except Exception as exc:
             print(f"[WARN] Vision model {model} error: {exc}")
     return ""
