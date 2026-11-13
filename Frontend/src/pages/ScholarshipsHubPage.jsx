@@ -642,7 +642,7 @@ export const ScholarshipsHubPage = () => {
                       Official Government / Foundation Document
                     </Badge>
                     <span className="text-xs text-slate-500 font-mono">
-                      {previewDoc.fileType || 'PDF'} • {previewDoc.fileSize || '4.2 MB'} • {previewDoc.pages || 24} Pages
+                      {previewDoc.fileType || 'PDF'}{previewDoc.fileSize ? ` • ${previewDoc.fileSize}` : ''}{previewDoc.pages ? ` • ${previewDoc.pages} Pages` : ''}
                     </span>
                   </div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -682,7 +682,7 @@ export const ScholarshipsHubPage = () => {
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  <span>📜 Full Gazette Directives ({previewDoc.pages || 24} Pages)</span>
+                  <span>📜 Full Gazette Directives{previewDoc.pages ? ` (${previewDoc.pages} Pages)` : ''}</span>
                 </button>
               </div>
 
@@ -693,7 +693,7 @@ export const ScholarshipsHubPage = () => {
                     {isSummaryLoading ? (
                       <div className="py-8 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
                         <RefreshCw className="w-4 h-4 animate-spin text-amber-500" />
-                        <span>AI is synthesizing the {previewDoc.pages || 24}-page official document...</span>
+                        <span>AI is synthesizing the official document...</span>
                       </div>
                     ) : (
                       <>
@@ -704,12 +704,7 @@ export const ScholarshipsHubPage = () => {
                             <span>Executive Summary &amp; Key Highlights</span>
                           </h4>
                           <ul className="space-y-1.5 text-xs text-amber-900/90 dark:text-amber-200/90">
-                            {(docSummary?.aiSummary?.keyTakeaways || [
-                              '100% Tuition Fee Reimbursement / Scholarship sanctioned under state statutory guidelines.',
-                              'Direct Benefit Transfer (DBT) routed through State Treasury into student bank account.',
-                              'Mandatory Samagra ID and Aadhaar biometric e-KYC authentication required.',
-                              'Full multi-page official gazette available for direct download below.'
-                            ]).map((pt, idx) => (
+                            {(docSummary?.aiSummary?.keyTakeaways || []).map((pt, idx) => (
                               <li key={idx} className="flex items-start gap-2">
                                 <span className="text-amber-500 font-bold shrink-0">•</span>
                                 <span>{pt}</span>
@@ -723,25 +718,25 @@ export const ScholarshipsHubPage = () => {
                           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">🎓 Eligibility Benchmark</span>
                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {docSummary?.aiSummary?.eligibility || 'MP Domicile, Class 12th Board Benchmark'}
+                              {docSummary?.aiSummary?.eligibility || 'Not specified in scraped document'}
                             </p>
                           </div>
                           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">💰 Family Income Limit</span>
                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {docSummary?.aiSummary?.incomeCap || 'Below Rs. 6.00 Lakhs / Annum (Computerized Certificate)'}
+                              {docSummary?.aiSummary?.incomeCap || 'Not specified in scraped document'}
                             </p>
                           </div>
                           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">🏆 Financial Entitlement</span>
                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {docSummary?.aiSummary?.financialBenefits || '100% Tuition Fee Waiver + Monthly Hosteller Stipend'}
+                              {docSummary?.aiSummary?.financialBenefits || 'Not specified in scraped document'}
                             </p>
                           </div>
                           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">⏳ Critical Timeline &amp; Deadline</span>
                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {docSummary?.aiSummary?.deadlines || 'Within 30 days of admission confirmation'}
+                              {docSummary?.aiSummary?.deadlines || 'Not specified in scraped document'}
                             </p>
                           </div>
                         </div>
@@ -753,13 +748,7 @@ export const ScholarshipsHubPage = () => {
                             <span>Mandatory Documents Checklist for Verification</span>
                           </h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300">
-                            {(docSummary?.aiSummary?.requiredDocuments || [
-                              'Aadhaar e-KYC linked with 9-digit Samagra Member ID',
-                              '10th & 12th Digital Marksheets',
-                              'Digital Income Certificate with active QR Code',
-                              'State Domicile Certificate (Mool Niwas Praman Patra)',
-                              'College Admission Allotment Letter'
-                            ]).map((d, i) => (
+                            {(docSummary?.aiSummary?.requiredDocuments || []).map((d, i) => (
                               <div key={i} className="flex items-center gap-1.5">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                                 <span>{d}</span>
@@ -777,7 +766,7 @@ export const ScholarshipsHubPage = () => {
                         <HardDrive className="w-4 h-4 text-emerald-600" />
                         Storage Vault: Campus_Documents &gt; Notices (Folder ID: {previewDoc.driveFolderId || '1mqB0PDUZfZeTakC0rkKZ-ZmyfNLhKl4q'})
                       </span>
-                      <span className="font-semibold">{previewDoc.pages || 24} Pages Complete Gazette</span>
+                      <span className="font-semibold">{previewDoc.pages ? `${previewDoc.pages} Pages Complete Gazette` : 'Complete Gazette'}</span>
                     </div>
 
                     <div className="space-y-2">
@@ -821,7 +810,7 @@ export const ScholarshipsHubPage = () => {
                     className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Download Full Official PDF ({previewDoc.pages || 24} Pages)</span>
+                    <span>Download Full Official PDF{previewDoc.pages ? ` (${previewDoc.pages} Pages)` : ''}</span>
                   </button>
                 </div>
               </div>
