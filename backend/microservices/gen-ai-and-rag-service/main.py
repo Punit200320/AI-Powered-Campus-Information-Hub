@@ -678,6 +678,24 @@ def _call_openrouter(messages: list, *, temperature: float = 0.7, max_tokens: in
         except Exception as exc:
             print(f"[WARN] Model {model} error: {exc}")
 
+    # Fallback to Gemini (validated: gemini-3.6-flash works) when OpenRouter
+    # free models are rate-limited or fail, so summarization still succeeds.
+    try:
+        from_llm = "\n".join(
+            f"{m.get('role', 'user')}: {m.get('content', '')}" for m in messages
+        )
+        # Keep the prompt small enough for Gemini to answer within its timeout.
+        # A large document makes generation exceed the HTTP timeout.
+        if len(from_llm) > 6000:
+            from_llm = from_llm[:6000]
+        if from_llm.strip():
+            gemini_reply = _call_gemini(from_llm)
+            if gemini_reply:
+                print("[INFO] OpenRouter chain failed — Gemini fallback succeeded")
+                return gemini_reply.strip()
+    except Exception as exc:
+        print(f"[WARN] Gemini fallback error: {exc}")
+
     return None
 
 
@@ -687,10 +705,10 @@ def _call_gemini(prompt: str) -> Optional[str]:
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
     if not api_key:
         return None
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
     try:
-        resp = http_requests.post(url, json=payload, timeout=30)
+        resp = http_requests.post(url, json=payload, timeout=75)
         if resp.status_code == 200:
             data = resp.json()
             candidates = data.get("candidates", [])
@@ -925,7 +943,7 @@ async def chat_generate(req: ChatRequest, user: Optional[dict] = Depends(get_opt
             status_reply = (
                 "🤖 **CampusAI Assistant (v2.4)**\n\n"
                 f"• **Active AI Engine**: {active_engine}\n"
-                "• **Configured Free Models**: `nvidia/nemotron-3.5-lightning:free`, `liquid/lfm-2.5-2.6b:free`, `gemini-1.5-flash`\n"
+                "• **Configured Free Models**: `nvidia/nemotron-3.5-lightning:free`, `liquid/lfm-2.5-2.6b:free`, `gemini-3.6-flash`\n"
                 "• **Campus Knowledge Base**: 49 Verified Live Scholarships (MPTAAS, MMVY, Reliance, Tata, Birla, Global) indexed via Google Sheets\n\n"
                 "💡 *Tip: To connect live cloud LLMs, simply add your free `OPENROUTER_API_KEY` or `GEMINI_API_KEY` to `config/.env`.*"
             )
@@ -1287,6 +1305,7 @@ async def health_check():
         "service": "campus-ai",
         "version": "1.0.0",
         "openrouter_configured": bool(OPENROUTER_API_KEY),
+        "gemini_configured": bool(os.getenv("GEMINI_API_KEY")),
     }
 
 
