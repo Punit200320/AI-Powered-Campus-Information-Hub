@@ -82,14 +82,20 @@ try:
             textlen = len(text.strip())
             npages = m._pdf_page_count(data) if data else 1
             summary = ""
+            source = ""
             if text.strip():
-                summary = m._summarize_with_llm(text)
+                summary, source = m._summarize_with_source(text)
             if not summary and textlen < 120 and npages <= 6:
                 summary = m._summarize_pdf_with_vision(data)
+                if summary:
+                    source = "ai"
             if not summary:
                 summary = text[:250]
+                source = "raw"
             if summary:
                 entry["summary"] = str(summary).strip()
+                if source:
+                    entry["summarySource"] = source
             # yield CPU between heavy per-file work
             time.sleep(0.2)
         except Exception as exc:

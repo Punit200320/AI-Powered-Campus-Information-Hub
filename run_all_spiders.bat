@@ -3,7 +3,7 @@ title Campus Information Hub - All Spiders Runner
 color 0E
 
 echo ========================================================
-echo    Running All Scholarships, Counselling & Docs Spiders
+echo    Running All Scholarships, Counselling ^& Docs Spiders
 echo ========================================================
 echo.
 
@@ -20,6 +20,7 @@ if exist "C:\Users\DELL\Desktop\Scrapy\.venv\Scripts\scrapy.exe" (
 )
 
 cd /d "%~dp0backend\microservices\webscraping-service"
+set "PYTHONPATH=%~dp0backend\microservices\webscraping-service;%PYTHONPATH%"
 
 echo [1/9] Running MPTAAS Scholarship Spider...
 "%SCRAPY_CMD%" runspider spiders\mptaas_spider.py
@@ -58,7 +59,7 @@ echo [9/9] Running Campus Academic Documents Spider (PYQs, Notices, Notes, Broch
 echo.
 
 echo ========================================================
-echo All 9 Scrapers Completed! Database & Google Sheets Synced.
+echo All 9 Scrapers Completed! Database ^& Google Sheets Synced.
 echo ========================================================
 if not "%1"=="--no-pause" (
     if "%CI%"=="" if "%AUTOMATED%"=="" timeout /t 3 >nul 2>&1

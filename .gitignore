@@ -45,3 +45,15 @@ backend/microservices/gen-ai-and-rag-service/_cache/
 storage/.backend_pid
 storage/_sample_notice.txt
 *.bak_atomic
+# Secrets hardening (never commit any credential material)
+config/.env
+.env.*
+*.pem
+*.pfx
+*.p12
+*.key
+id_rsa*
+*.secret
+credentials*.json
+service_account*.json
+*.service-account.json

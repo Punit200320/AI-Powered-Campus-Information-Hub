@@ -606,7 +606,18 @@ export const CounsellingHubPage = () => {
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>✨ AI Summary &amp; Eligibility</span>
+                  <span className="flex items-center gap-1.5">
+                    ✨ AI Summary &amp; Eligibility
+                    {previewDoc?.summarySource === 'extractive' && (
+                      <span className="text-[9px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-full">✂️ Extract</span>
+                    )}
+                    {previewDoc?.summarySource === 'raw' && (
+                      <span className="text-[9px] font-bold uppercase bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full">⚠️ Raw</span>
+                    )}
+                    {previewDoc?.summarySource === 'ai' && (
+                      <span className="text-[9px] font-bold uppercase bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-full">🤖 AI</span>
+                    )}
+                  </span>
                 </button>
                 <button
                   onClick={() => setModalTab('full')}

@@ -314,7 +314,42 @@ def _extractive_summary(text, max_len: int = 300) -> str:
 
 
 
+def _summarize_with_source(text: str, max_len: int = 300):
+    """Return (summary, source) where source is 'ai' (LLM polished) or
+    'extractive' (local fallback). Mirrors _summarize_with_llm but also
+    reports which path produced the summary."""
+    if text is None or not str(text).strip():
+        return "", ""
+    snippet = str(text).strip()
+    if len(snippet) > 6000:
+        snippet = snippet[:6000]
+    try:
+        reply = _call_llm(
+            [
+                {
+                    "role": "system",
+                    "content": "You summarize official scholarship notices and brochures "
+                    "for students. Return a concise 3-5 sentence summary covering: what "
+                    "the scheme is, eligibility, benefits, key dates, how to apply.",
+                },
+                {"role": "user", "content": snippet},
+            ],
+            snippet,
+            max_tokens=2048,
+        )
+        if reply and str(reply).strip():
+            return str(reply).strip(), "ai"
+    except Exception:
+        pass
+    return _extractive_summary(snippet, max_len), "extractive"
+
+
 def _summarize_with_llm(text: str, max_len: int = 300) -> str:
+    """Legacy wrapper returning only the summary string."""
+    summary, _ = _summarize_with_source(text, max_len)
+    return summary
+
+
     if text is None or not str(text).strip():
         return ""
     snippet = str(text).strip()
@@ -529,6 +564,7 @@ def _build_scraped_doc_summaries() -> list:
     # re-invoking the vision/text LLMs for documents that already have a good
     # summary. Falls back to {} if the file is missing/corrupt.
     _prev_summaries = {}
+    _prev_sources = {}
     try:
         _prev_f = os.path.join(os.path.dirname(__file__), "_cache", "scraped_docs.json")
         if os.path.exists(_prev_f):
@@ -540,6 +576,8 @@ def _build_scraped_doc_summaries() -> list:
                         summ = entry.get("summary")
                         if src and summ:
                             _prev_summaries[src] = summ
+                        if src:
+                            _prev_sources[src] = entry.get("summarySource", "")
     except Exception:
         pass
 
@@ -570,6 +608,7 @@ def _build_scraped_doc_summaries() -> list:
                     "fileType": "PDF",
                     "pages": _pdf_page_count(data) if data else 1,
                     "summary": prev if len(prev) > 80 else "",
+                    "summarySource": _prev_sources.get(fname, ""),
                     "source": fname,
                     "downloadPath": "/api/v1/scholarships/documents/{0}/download".format(base),
                 }
@@ -688,6 +727,9 @@ async def preview_scraped_document(doc_id: str):
 # ---------------------------------------------------------------------------
 
 
+# LLM provider rate-limit / cooldown bookkeeping
+_LLM_COOLDOWN = {}   # provider -> epoch-seconds until which we avoid it
+_LLM_LAST_OK = {}    # provider -> epoch of last success
 def _call_groq(messages: list, *, temperature: float = 0.7, max_tokens: int = 2048) -> Optional[str]:
     """
     Call Groq (OpenAI-compatible API). Returns assistant content or None.
@@ -722,6 +764,7 @@ def _call_groq(messages: list, *, temperature: float = 0.7, max_tokens: int = 20
             else:
                 print(f"[WARN] Groq {model} returned {resp.status_code}: {resp.text[:120]}")
                 if resp.status_code in (401, 402, 403, 429):
+                    _LLM_COOLDOWN["groq"] = time.time() + 60
                     break
         except Exception as exc:
             print(f"[WARN] Groq {model} error: {exc}")
@@ -768,6 +811,7 @@ def _call_openrouter(messages: list, *, temperature: float = 0.7, max_tokens: in
                 # Rate limit or 4xx will apply to every free model; don't waste
                 # time trying the rest of the fallback chain.
                 if resp.status_code in (401, 402, 429):
+                    _LLM_COOLDOWN["openrouter"] = time.time() + 60
                     break
         except Exception as exc:
             print(f"[WARN] Model {model} error: {exc}")
@@ -810,20 +854,49 @@ def _call_gemini(prompt: str) -> Optional[str]:
                 parts = candidates[0].get("content", {}).get("parts", [])
                 if parts:
                     return parts[0].get("text", "")
+        elif resp.status_code in (401, 402, 403, 429):
+            _LLM_COOLDOWN["gemini"] = time.time() + 60
+            print(f"[WARN] Gemini {resp.status_code} - cooldown 60s")
     except Exception as exc:
         print(f"[WARN] Gemini error: {exc}")
     return None
 
 
 def _call_llm(messages: list, prompt_text: str = "", *, temperature: float = 0.7, max_tokens: int = 2048) -> Optional[str]:
-    """Try Groq first, then Gemini, then OpenRouter free models."""
-    res = _call_groq(messages, temperature=temperature, max_tokens=max_tokens)
-    if res:
-        return res
-    res = _call_gemini(prompt_text or (messages[-1].get("content", "") if messages else ""))
-    if res:
-        return res
-    return _call_openrouter(messages, temperature=temperature, max_tokens=max_tokens)
+    """Try providers in rotation: last-working first, skipping any that are in a
+    rate-limit cooldown, with per-provider retry/backoff on transient errors."""
+    now = time.time()
+    order = ["groq", "gemini", "openrouter"]
+    # healthy (not cooling down) providers first; then most-recent-success first
+    def _key(pr):
+        cd = _LLM_COOLDOWN.get(pr, 0)
+        if cd > now:
+            return (1, cd)
+        return (0, -_LLM_LAST_OK.get(pr, 0))
+    order.sort(key=_key)
+
+    last_err = None
+    for provider in order:
+        if _LLM_COOLDOWN.get(provider, 0) > now:
+            continue
+        for attempt in range(3):
+            try:
+                if provider == "groq":
+                    res = _call_groq(messages, temperature=temperature, max_tokens=max_tokens)
+                elif provider == "gemini":
+                    res = _call_gemini(prompt_text or (messages[-1].get("content", "") if messages else ""))
+                else:
+                    res = _call_openrouter(messages, temperature=temperature, max_tokens=max_tokens)
+                if res:
+                    _LLM_LAST_OK[provider] = time.time()
+                    return res
+                break  # provider returned None -> try next provider
+            except Exception as exc:
+                last_err = exc
+                time.sleep(0.5 * (attempt + 1))
+    return None
+
+
 
 def _parse_json_from_llm(text: str) -> Optional[dict]:
     """Best-effort extraction of JSON from an LLM response."""

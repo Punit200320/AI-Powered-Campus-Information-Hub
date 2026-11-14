@@ -497,7 +497,7 @@ export const ScholarshipsHubPage = () => {
                     {doc.summary ? (
                       <div className="mt-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/70 dark:border-emerald-500/20 p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 mb-1">
-                          AI Summary
+                          {doc.summarySource === 'extractive' ? '✂️ Extract Summary' : doc.summarySource === 'raw' ? '⚠️ Raw Text' : '🤖 AI Summary'}
                         </p>
                         <p className="text-xs text-emerald-900 dark:text-emerald-100 leading-relaxed line-clamp-3">
                           {doc.summary}
@@ -698,6 +698,20 @@ export const ScholarshipsHubPage = () => {
                     ) : (
                       <>
                         {/* Key Highlights */}
+                        {docSummary?.summarySource && (
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              Summary source:
+                            </span>
+                            {docSummary.summarySource === 'extractive' ? (
+                              <span className="text-[9px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-full">✂️ Extract Summary</span>
+                            ) : docSummary.summarySource === 'raw' ? (
+                              <span className="text-[9px] font-bold uppercase bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full">⚠️ Raw Text</span>
+                            ) : (
+                              <span className="text-[9px] font-bold uppercase bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-full">🤖 AI Polished Summary</span>
+                            )}
+                          </div>
+                        )}
                         <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
                           <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5" />
