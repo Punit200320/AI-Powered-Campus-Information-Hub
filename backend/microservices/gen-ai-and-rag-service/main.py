@@ -246,8 +246,9 @@ _SCRAPED_DOCS_DIR = os.path.join(
 )
 
 
-def _extractive_summary(text: str, max_len: int = 300) -> str:
+def _extractive_summary(text, max_len: int = 300) -> str:
     """Local, dependency-free extractive summarizer (improved).
+    Accepts str or bytes; bytes are UTF-8 decoded safely.
 
     Normalizes OCR/extracted text (removes control chars and collapses
     whitespace), then picks the most content-bearing lines — preferring lines
@@ -256,10 +257,18 @@ def _extractive_summary(text: str, max_len: int = 300) -> str:
     external LLM providers are rate-limited.
     """
     import re as _re
-    if not text or not str(text).strip():
+    if not text:
+        return ""
+    if isinstance(text, (bytes, bytearray)):
+        try:
+            text = text.decode("utf-8", errors="replace")
+        except Exception:
+            return ""
+    text = str(text)
+    if not text.strip():
         return ""
     # 1) normalize: drop control chars, join fragments, keep sentence-ish lines
-    raw = str(text)
+    raw = text
     for _ in range(3):
         raw = raw.replace("\n\n", "\n")
     raw = _re.sub(r"[\x00-\x1f\x7f]", " ", raw)
@@ -572,8 +581,15 @@ def _build_scraped_doc_summaries() -> list:
     try:
         _cache_dir = os.path.join(os.path.dirname(__file__), "_cache")
         os.makedirs(_cache_dir, exist_ok=True)
-        with io.open(os.path.join(_cache_dir, "scraped_docs.json"), "w", encoding="utf-8") as fh:
+        _target = os.path.join(_cache_dir, "scraped_docs.json")
+        _tmp = _target + ".tmp"
+        # Atomic write: write to a temp file, flush, then atomically replace the
+        # live cache so a crash mid-write can never truncate/corrupt it.
+        with io.open(_tmp, "w", encoding="utf-8") as fh:
             json.dump(results, fh, ensure_ascii=False)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(_tmp, _target)
     except Exception as persist_exc:
         print(f"[WARN] Could not persist scraped-doc cache: {persist_exc}")
 

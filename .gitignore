@@ -44,3 +44,4 @@ backend/microservices/gen-ai-and-rag-service/_cache/
 *.bak_easyocr
 storage/.backend_pid
 storage/_sample_notice.txt
+*.bak_atomic
