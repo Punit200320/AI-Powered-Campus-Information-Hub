@@ -859,12 +859,83 @@ async def chat_generate(req: ChatRequest, user: Optional[dict] = Depends(get_opt
         relevant_citations: List[Citation] = []
 
         if scholarships:
-            # Simple keyword-based retrieval
-            query_lower = req.message.lower()
+            # ---- Improved RAG retrieval: stopword-filtered weighted scoring ----
+            _STOPWORDS = {
+                "the","a","an","is","are","was","were","be","been","am","to",
+                "of","in","on","for","and","or","but","with","at","from","by",
+                "i","me","my","you","your","what","which","who","how","why",
+                "when","where","tell","show","give","find","help","please","can",
+                "about","this","that","these","those","it","its","all","any",
+                "some","scholarship","scholarships","scheme","schemes","student",
+                "students","study","available","application","apply","need",
+                "want","there","their","they","we","our","us","not","no","yes",
+            }
+            # Acronym -> alias expansion so MPTAAS/MMVY match even when user
+            # types the acronym or the full name.
+            _ALIASES = {
+                "mptaas": ["mptaas", "tribal", "madhya pradesh tribal"],
+                "mmvy": ["mmvy", "medhavi", "mukhyamantri medhavi vidyarthi yojana"],
+                "josaa": ["josaa"],
+                "csab": ["csab"],
+                "dte": ["dte", "centralized counselling", "centralised counselling"],
+                "reliance": ["reliance"],
+                "tata": ["tata"],
+                "birla": ["birla", "aditya birla"],
+                "national": ["national", "nsp", "aicte"],
+            }
+
+            def _query_tokens(q: str):
+                raw = q.lower().split()
+                toks = set()
+                for w in raw:
+                    w = w.strip(".,!?;:()[]{}-")
+                    # strip any surrounding quote chars too
+                    while w[:1] in ("'", """):
+                        w = w[1:]
+                    while w[-1:] in ("'", """):
+                        w = w[:-1]
+                    if not w or w in _STOPWORDS or len(w) < 3:
+                        continue
+                    toks.add(w)
+                    for alias_key, aliases in _ALIASES.items():
+                        if w == alias_key:
+                            toks.update(aliases)
+                return toks
+
+            q_tokens = _query_tokens(req.message)
+
+            def _score_row(row, toks):
+                title = (_get_scholarship_title(row) or "").lower()
+                provider = (_get_scholarship_provider(row) or "").lower()
+                amount = (row.get("Amount") or row.get("amount") or "").lower()
+                deadline = (row.get("Deadline") or row.get("deadline") or "").lower()
+                elig = (row.get("Eligibility") or row.get("eligibility") or "").lower()
+                score = 0.0
+                for t in toks:
+                    if t in title:
+                        score += 5.0
+                    if t in provider:
+                        score += 4.0
+                    if t in elig:
+                        score += 2.0
+                    if t in amount:
+                        score += 1.5
+                    if t in deadline:
+                        score += 1.0
+                return score
+
+            scored = []
             for idx, row in enumerate(scholarships):
-                row_text = " ".join(str(v).lower() for v in row.values())
-                # Check for keyword overlap
-                if any(word in row_text for word in query_lower.split() if len(word) > 2):
+                if not q_tokens:
+                    break
+                score = _score_row(row, q_tokens)
+                if score > 0:
+                    scored.append((score, idx, row))
+
+            # Sort by score desc, cap citations/context to top 6.
+            if scored:
+                scored.sort(key=lambda x: -x[0])
+                for score, idx, row in scored[:6]:
                     context_chunks.append(json.dumps(row, ensure_ascii=False))
                     relevant_citations.append(
                         Citation(
@@ -874,9 +945,9 @@ async def chat_generate(req: ChatRequest, user: Optional[dict] = Depends(get_opt
                             author=_get_scholarship_provider(row),
                         )
                     )
-            # If no keyword match, include up to first 10 rows as general context
-            if not context_chunks:
-                for idx, row in enumerate(scholarships[:10]):
+            else:
+                # No meaningful match -> include a few as general context.
+                for idx, row in enumerate(scholarships[:6]):
                     context_chunks.append(json.dumps(row, ensure_ascii=False))
 
         # Also include summarized scraped scholarship documents (notices/brochures)
