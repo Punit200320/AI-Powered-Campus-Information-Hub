@@ -62,7 +62,7 @@ export const Navbar = ({ onOpenCommand, onToggleSidebar }) => {
                 </Badge>
               </div>
               <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 hidden sm:block">
-                Smart Assistant
+                Assistant
               </span>
             </div>
           </Link>

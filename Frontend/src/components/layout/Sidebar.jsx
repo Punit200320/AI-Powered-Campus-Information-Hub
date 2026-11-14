@@ -30,7 +30,7 @@ const NAV_ITEMS = [
   { name: 'Counselling Portal', path: '/counselling', icon: Compass, badge: 'DTE/JoSAA' },
   { name: 'Study Material Vault', path: '/study-material', icon: BookOpen, badge: 'PYQs' },
   { name: 'AI Campus Chat', path: '/chat', icon: MessageSquare, badge: 'AI' },
-  { name: 'Smart Resource Finder', path: '/resources', icon: Search },
+  { name: 'Resource Finder', path: '/resources', icon: Search },
   { name: 'Document Summarizer', path: '/summarize', icon: FileText, badge: 'New' },
   { name: 'Question Generator', path: '/quiz', icon: HelpCircle },
   { name: 'Study Planner', path: '/planner', icon: Calendar },

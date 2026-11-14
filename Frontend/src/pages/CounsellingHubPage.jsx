@@ -606,7 +606,7 @@ export const CounsellingHubPage = () => {
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>✨ AI Smart Summary &amp; Eligibility</span>
+                  <span>✨ AI Summary &amp; Eligibility</span>
                 </button>
                 <button
                   onClick={() => setModalTab('full')}

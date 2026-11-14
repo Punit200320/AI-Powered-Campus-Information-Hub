@@ -1,4 +1,4 @@
-# 🎓 AI Campus Assistant with Smart Resource Finder
+# 🎓 AI Campus Assistant with Resource Finder
 
 A premium, production-grade frontend web platform built for modern universities and colleges. Combines design sensibilities of Linear, Notion, and Vercel with intelligent, LLM-powered academic assistance.
 
@@ -50,7 +50,7 @@ A premium, production-grade frontend web platform built for modern universities 
 - Chat history sidebar with categorized dialogs.
 - Copy response button with feedback toast, regenerate response button, and new session generator.
 
-### 5. 🔍 Smart Resource Finder (`/resources`)
+### 5. 🔍 Resource Finder (`/resources`)
 - Real-time search with instant results.
 - Category filters: *All, Lecture Notes, Previous Year Questions (PYQs), Lab Manuals, Research Papers*.
 - Department and Semester filters.

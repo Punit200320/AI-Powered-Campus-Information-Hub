@@ -1146,7 +1146,7 @@ async def chat_generate(req: ChatRequest, user: Optional[dict] = Depends(get_opt
                 citations=relevant_citations[:5],
             )
 
-        # Fallback if external LLM is unavailable: Provide contextual RAG or smart conversational response
+        # Fallback if external LLM is unavailable: Provide contextual RAG or conversational response
         q_clean = req.message.lower().strip()
 
         # Handle questions about model name / identity / status

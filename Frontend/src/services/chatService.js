@@ -124,7 +124,7 @@ I have searched the **Campus Academic Vector Database (Qdrant)** and indexed uni
 #### Key Findings:
 1. **Academic Context:** This topic is referenced in the Department Syllabus for the 2026 curriculum.
 2. **Key Recommendation:** Review the official lecture handouts and practice the previous semester problem sets.
-3. **Cross-Reference:** Check the **Smart Resource Finder** tab for verified faculty notes with complete derivations.
+3. **Cross-Reference:** Check the **Resource Finder** tab for verified faculty notes with complete derivations.
 
 > *Tip: You can generate a tailored quiz on this exact topic in the **Question Generator** tab to test your retention.*`,
       citations: [

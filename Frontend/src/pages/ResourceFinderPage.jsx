@@ -166,7 +166,7 @@ export const ResourceFinderPage = () => {
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Smart Resource Finder
+            Resource Finder
           </h1>
           <Button
             variant="primary"
