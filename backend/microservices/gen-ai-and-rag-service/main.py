@@ -10,6 +10,7 @@ import os
 import json
 import uuid
 import traceback
+import io
 from typing import List, Optional
 
 # ---------------------------------------------------------------------------
@@ -465,17 +466,22 @@ def _build_scraped_doc_summaries() -> list:
         _prev_f = os.path.join(os.path.dirname(__file__), "_cache", "scraped_docs.json")
         if os.path.exists(_prev_f):
             with io.open(_prev_f, encoding="utf-8") as fh:
-                for entry in json.load(fh):
-                    src = entry.get("source")
-                    if src and entry.get("summary"):
-                        _prev_summaries[src] = entry["summary"]
+                _cached = json.load(fh)
+                if isinstance(_cached, list):
+                    for entry in _cached:
+                        src = entry.get("source")
+                        summ = entry.get("summary")
+                        if src and summ:
+                            _prev_summaries[src] = summ
     except Exception:
         pass
+
     results: list = []
     try:
         if not os.path.isdir(_SCRAPED_DOCS_DIR):
             _scraped_doc_cache = results
             return results
+        # --- Fast pass: list every PDF immediately (no blocking LLM/OCR) ---
         for fname in sorted(os.listdir(_SCRAPED_DOCS_DIR)):
             if not fname.lower().endswith(".pdf"):
                 continue
@@ -485,33 +491,10 @@ def _build_scraped_doc_summaries() -> list:
                     data = fh.read()
             except Exception:
                 continue
-            text = _extract_text_from_pdf(data) or ""
-            if not text.strip():
-                text = "Scraped document content not extractable."
-            # Only use vision for scanned documents (no usable text layer),
-            # e.g. Hindi notices. Files with real text go through the text LLM.
-            npages = _pdf_page_count(data) if data else 1
-            textlen = len(text.strip())
-            summary = ""
-            # REUSE an already-computed summary from the persisted snapshot so we
-            # do not hammer the API on every refresh. This is the key fix that
-            # stops free-quota exhaustion and connection-pool retry failures.
-            if _prev_summaries is not None:
-                prev = _prev_summaries.get(fname)
-                if prev and len(str(prev).strip()) > 80:
-                    if not (str(prev).strip().startswith("**1.")
-                            or "1. Analyze the Image" in str(prev)
-                            or str(prev).strip().lower().startswith("**1.")):
-                        summary = str(prev).strip()
-            # Prefer the text LLM (Groq) first wherever extractable text exists,
-            # including OCR text. Vision is only a last-resort for scanned docs
-            # whose OCR produced no meaningful text, and is time-boxed to avoid
-            # hanging on rate-limited free models.
-            if not summary and text.strip():
-                summary = _summarize_with_llm(text)
-            if not summary and textlen < 120 and npages <= 6:
-                summary = _summarize_pdf_with_vision(data)
             base = os.path.splitext(fname)[0]
+            prev = str(_prev_summaries.get(fname) or "").strip()
+            if prev.startswith("**1.") or "1. Analyze the Image" in prev or prev.lower().startswith("**1."):
+                prev = ""
             results.append(
                 {
                     "id": base,
@@ -519,7 +502,7 @@ def _build_scraped_doc_summaries() -> list:
                     "category": "Scholarship Notice / Brochure",
                     "fileType": "PDF",
                     "pages": _pdf_page_count(data) if data else 1,
-                    "summary": summary or text[:250],
+                    "summary": prev if len(prev) > 80 else "",
                     "source": fname,
                     "downloadPath": "/api/v1/scholarships/documents/{0}/download".format(base),
                 }
@@ -527,7 +510,7 @@ def _build_scraped_doc_summaries() -> list:
     except Exception as exc:
         print(f"[WARN] Scraped doc scan error: {exc}")
     _scraped_doc_cache = results
-    # Persist to disk so we don't re-run expensive OCR/vision on next startup.
+    # Persist the fast list immediately so restart doesn't rescan everything.
     try:
         _cache_dir = os.path.join(os.path.dirname(__file__), "_cache")
         os.makedirs(_cache_dir, exist_ok=True)
@@ -535,7 +518,27 @@ def _build_scraped_doc_summaries() -> list:
             json.dump(results, fh, ensure_ascii=False)
     except Exception as persist_exc:
         print(f"[WARN] Could not persist scraped-doc cache: {persist_exc}")
+
+    # Background enrichment runs OUT-OF-PROCESS (subprocess) so it never slows
+    # down the FastAPI server. Spawn at most once per process.
+    if not globals().get("_ENRICH_STARTED"):
+        globals()["_ENRICH_STARTED"] = True
+        try:
+            import subprocess as _sp
+            _wrk = os.path.join(os.path.dirname(__file__), "_enrich_worker.py")
+            if os.path.exists(_wrk):
+                _flags = getattr(_sp, "CREATE_NO_WINDOW", 0)
+                _sp.Popen(
+                    [sys.executable, _wrk],
+                    cwd=os.path.dirname(__file__),
+                    stdout=_sp.DEVNULL,
+                    stderr=_sp.DEVNULL,
+                    creationflags=_flags,
+                )
+        except Exception as exc:
+            print(f"[WARN] could not start enrich worker: {exc}")
     return results
+
 
 
 def _load_scraped_doc_summaries() -> list:
@@ -586,6 +589,23 @@ async def download_scraped_document(doc_id: str):
         if os.path.exists(fp):
             from fastapi.responses import FileResponse
             return FileResponse(fp, media_type="application/pdf", filename=c)
+    raise HTTPException(status_code=404, detail="Not found")
+
+
+@app.get("/api/v1/scholarships/documents/{doc_id}/preview")
+async def preview_scraped_document(doc_id: str):
+    """Serve the PDF inline (Content-Disposition: inline) so <iframe>/<embed>
+    can render it inside the frontend without forcing a download."""
+    if not os.path.isdir(_SCRAPED_DOCS_DIR):
+        raise HTTPException(status_code=404, detail="Not found")
+    for c in (doc_id + ".pdf", doc_id + ".PDF"):
+        fp = os.path.join(_SCRAPED_DOCS_DIR, c)
+        if os.path.exists(fp):
+            from fastapi.responses import FileResponse
+            return FileResponse(
+                fp, media_type="application/pdf", filename=c,
+                content_disposition_type="inline",
+            )
     raise HTTPException(status_code=404, detail="Not found")
 
 
@@ -808,38 +828,85 @@ def _pdf_page_count(file_bytes: bytes) -> int:
         return max(1, len(reader.pages))
     except Exception:
         return 1
+_easyocr_reader = None
+
+def _get_easyocr_reader():
+    """Lazily initialise EasyOCR *only* with language models present on disk.
+
+    download_enabled=False prevents any network download (which can hang on slow
+    connections). Missing models simply mean we fall back to RapidOCR.
+    """
+    global _easyocr_reader
+    if _easyocr_reader is None:
+        try:
+            import easyocr
+            _model_dir = os.path.join(os.path.expanduser("~"), ".EasyOCR", "model")
+            _langs = ["en"]
+            if os.path.exists(os.path.join(_model_dir, "devanagari.pth")):
+                _langs.append("hi")
+            _easyocr_reader = easyocr.Reader(_langs, gpu=False, download_enabled=False)
+        except Exception as exc:
+            print(f"[INFO] EasyOCR init failed ({exc}) — using RapidOCR")
+            _easyocr_reader = None
+    return _easyocr_reader
+
+
 def _ocr_extract_pdf(file_bytes: bytes) -> str:
-    """Run OCR on a PDF's pages using RapidOCR (onnxruntime), fallback-safe."""
-    try:
-        import fitz  # pymupdf
-        from rapidocr_onnxruntime import RapidOCR
-    except Exception:
-        return ""
-    try:
-        ocr = RapidOCR()
+    """OCR a scanned PDF. Prefers EasyOCR (en+hi) for Hindi support and falls
+    back to RapidOCR (onnxruntime). Returns '' only if both fail."""
+    import fitz  # pymupdf
+
+    def _run(use_easy):
+        import gc
         doc = fitz.open(stream=file_bytes, filetype="pdf")
         texts = []
-        for page in doc:
-            pix = page.get_pixmap(dpi=200)
+        for idx, page in enumerate(doc):
+            pix = page.get_pixmap(dpi=170)  # lower DPI => less memory
             img_bytes = pix.tobytes("png")
+            del pix
             import tempfile, os
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
                 tmp.write(img_bytes)
                 tmp_path = tmp.name
+            del img_bytes
             try:
-                result, _ = ocr(tmp_path)
-                if result:
-                    for line in result:
-                        if isinstance(line, (tuple, list)) and len(line) >= 2:
-                            texts.append(str(line[1]))
+                if use_easy:
+                    reader = _get_easyocr_reader()
+                    if reader is None:
+                        return ""
+                    res = reader.readtext(tmp_path, detail=0, paragraph=False, batch_size=1)
+                    texts.extend(str(t) for t in res if t and str(t).strip())
+                else:
+                    from rapidocr_onnxruntime import RapidOCR
+                    result, _ = RapidOCR()(tmp_path)
+                    if result:
+                        for line in result:
+                            if isinstance(line, (tuple, list)) and len(line) >= 2:
+                                texts.append(str(line[1]))
             finally:
                 try:
                     os.remove(tmp_path)
                 except Exception:
                     pass
+            # free intermediate buffers periodically
+            if idx % 3 == 2:
+                gc.collect()
             if len("\n".join(texts)) > 4000:  # cap OCR work
                 break
+        doc.close()
+        gc.collect()
         return "\n".join(texts)
+
+    # 1) EasyOCR first (Hindi-capable)
+    try:
+        txt = _run(use_easy=True)
+        if txt and len(txt.strip()) >= 10:
+            return txt
+    except Exception as exc:
+        print(f"[INFO] EasyOCR unavailable/empty, using RapidOCR: {exc}")
+    # 2) Fallback: RapidOCR
+    try:
+        return _run(use_easy=False)
     except Exception as exc:
         print(f"[WARN] OCR fallback failed: {exc}")
         return ""

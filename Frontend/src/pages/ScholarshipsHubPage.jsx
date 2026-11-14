@@ -769,12 +769,21 @@ export const ScholarshipsHubPage = () => {
                       <span className="font-semibold">{previewDoc.pages ? `${previewDoc.pages} Pages Complete Gazette` : 'Complete Gazette'}</span>
                     </div>
 
+                    {/* Inline preview of the authentic full document served from the backend */}
+                    <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 bg-white">
+                      <iframe
+                        src={previewDoc.downloadPath ? `${(aiClient.defaults.baseURL || 'http://localhost:8000/api/v1').replace(/\/api\/v1$/, '')}${previewDoc.downloadPath.replace(/\/download$/, '/preview')}` : undefined}
+                        title="Authentic Full Document"
+                        className="w-full h-[420px]"
+                      />
+                    </div>
+
                     <div className="space-y-2">
                       <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                         Executive Gazette Summary &amp; Statutory Directives
                       </h4>
                       <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 font-mono text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                        {previewDoc.previewText || previewDoc.description}
+                        {previewDoc.previewText || previewDoc.summary || 'This is a scanned document. AI summary is being generated — meanwhile use Preview/Download below.'}
                       </div>
                     </div>
 
@@ -783,7 +792,7 @@ export const ScholarshipsHubPage = () => {
                         Official Legal Description
                       </h4>
                       <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        {previewDoc.description}
+                        {previewDoc.description || previewDoc.summary || 'No legal description available.'}
                       </p>
                     </div>
                   </div>
