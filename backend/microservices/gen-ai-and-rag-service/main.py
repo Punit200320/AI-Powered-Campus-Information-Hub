@@ -247,31 +247,49 @@ _SCRAPED_DOCS_DIR = os.path.join(
 
 
 def _extractive_summary(text: str, max_len: int = 300) -> str:
-    """Local, dependency-free extractive summarizer.
+    """Local, dependency-free extractive summarizer (improved).
 
-    Picks the most content-bearing lines from an OCR/extracted document,
-    preferring lines that carry real information over headers/addresses.
-    Used as a guaranteed fallback when external LLM providers are rate-limited.
+    Normalizes OCR/extracted text (removes control chars and collapses
+    whitespace), then picks the most content-bearing lines — preferring lines
+    that carry real information (scheme/eligibility/benefit/date cues) over
+    headers, addresses and fragments. Used as a guaranteed fallback when
+    external LLM providers are rate-limited.
     """
     import re as _re
     if not text or not str(text).strip():
         return ""
-    lines = [ln.strip() for ln in str(text).splitlines() if ln.strip()]
+    # 1) normalize: drop control chars, join fragments, keep sentence-ish lines
+    raw = str(text)
+    for _ in range(3):
+        raw = raw.replace("\n\n", "\n")
+    raw = _re.sub(r"[\x00-\x1f\x7f]", " ", raw)
+    raw = _re.sub(r"[ \t]+", " ", raw)
+    lines = [ln.strip() for ln in raw.split("\n") if ln.strip()]
+    # join very short fragments into the previous line (word-per-line PDFs)
+    merged = []
+    for ln in lines:
+        if len(ln) < 3 and merged:
+            merged[-1] = merged[-1] + " " + ln
+        else:
+            merged.append(ln)
+    lines = merged
     if not lines:
         return ""
     noise = _re.compile(r'^(?:\d+[\s,.-]*|[-_=+*#~]+|\S+@\S+)$')
     cues = ("योजना", "छात्रवृत्ति", "राशि", "वेतन", "मानदेय", "पात्रता", "दिनांक",
             "नियम", "भर्ती", "परीक्षा", "विभाग", "शासन", "विद्यार्थी", "अनुसूचित",
             "scholarship", "scheme", "eligibility", "stipend", "tuition", "deadline",
-            "income", "benefit", "grant", "apply", "notice", "students", "portal")
+            "income", "benefit", "grant", "apply", "notice", "students", "portal",
+            "आदेश", "लाभ", "पात्र", "मेधावी", "शुल्क", "प्रतिपूर्ति", "निर्धारित")
     picked = []
     for i, ln in enumerate(lines):
         if len(ln) < 4 or noise.match(ln):
             continue
         low = ln.lower()
-        score = 1 if len(ln) <= 120 else 0
-        if any(c in low for c in cues):
-            score += 3
+        score = 1 if len(ln) <= 160 else 0
+        cues_hit = sum(1 for c in cues if c in ln)
+        if cues_hit:
+            score += 2 + cues_hit
         if i >= 2:
             score += 1
         picked.append((score, i, ln))
@@ -279,9 +297,12 @@ def _extractive_summary(text: str, max_len: int = 300) -> str:
     ordered = sorted(picked[:8], key=lambda t: t[1])
     parts = [ln for _, _, ln in ordered]
     if not parts:
+        parts = [ln for ln in lines if len(ln) > 10][:5]
+    if not parts:
         parts = lines[:5]
     out = " ".join(parts)
     return out[:max_len].strip()
+
 
 
 def _summarize_with_llm(text: str, max_len: int = 300) -> str:
