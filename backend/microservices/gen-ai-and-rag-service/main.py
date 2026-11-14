@@ -246,6 +246,44 @@ _SCRAPED_DOCS_DIR = os.path.join(
 )
 
 
+def _extractive_summary(text: str, max_len: int = 300) -> str:
+    """Local, dependency-free extractive summarizer.
+
+    Picks the most content-bearing lines from an OCR/extracted document,
+    preferring lines that carry real information over headers/addresses.
+    Used as a guaranteed fallback when external LLM providers are rate-limited.
+    """
+    import re as _re
+    if not text or not str(text).strip():
+        return ""
+    lines = [ln.strip() for ln in str(text).splitlines() if ln.strip()]
+    if not lines:
+        return ""
+    noise = _re.compile(r'^(?:\d+[\s,.-]*|[-_=+*#~]+|\S+@\S+)$')
+    cues = ("योजना", "छात्रवृत्ति", "राशि", "वेतन", "मानदेय", "पात्रता", "दिनांक",
+            "नियम", "भर्ती", "परीक्षा", "विभाग", "शासन", "विद्यार्थी", "अनुसूचित",
+            "scholarship", "scheme", "eligibility", "stipend", "tuition", "deadline",
+            "income", "benefit", "grant", "apply", "notice", "students", "portal")
+    picked = []
+    for i, ln in enumerate(lines):
+        if len(ln) < 4 or noise.match(ln):
+            continue
+        low = ln.lower()
+        score = 1 if len(ln) <= 120 else 0
+        if any(c in low for c in cues):
+            score += 3
+        if i >= 2:
+            score += 1
+        picked.append((score, i, ln))
+    picked.sort(key=lambda t: (-t[0], t[1]))
+    ordered = sorted(picked[:8], key=lambda t: t[1])
+    parts = [ln for _, _, ln in ordered]
+    if not parts:
+        parts = lines[:5]
+    out = " ".join(parts)
+    return out[:max_len].strip()
+
+
 def _summarize_with_llm(text: str, max_len: int = 300) -> str:
     if text is None or not str(text).strip():
         return ""
@@ -270,8 +308,7 @@ def _summarize_with_llm(text: str, max_len: int = 300) -> str:
             return reply.strip()
     except Exception:
         pass
-    lines = [ln.strip() for ln in snippet.splitlines() if ln.strip()]
-    return " ".join(lines[:5])[:max_len]
+    return _extractive_summary(snippet, max_len)
 
 
 def _clean_vision_summary(raw: str) -> str:
