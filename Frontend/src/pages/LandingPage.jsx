@@ -18,6 +18,8 @@ import {
   Cpu,
   ChevronRight,
   Star,
+  Menu,
+  X,
   Users,
   Search,
 } from 'lucide-react';
@@ -30,6 +32,7 @@ import { fadeInUp, staggerContainer } from '../utils/animations';
 export const LandingPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('chat');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const PREVIEW_TABS = [
     { id: 'chat', label: 'AI Campus Chat', icon: MessageSquare },
@@ -75,6 +78,16 @@ export const LandingPage = () => {
             </a>
           </div>
 
+          {/* Mobile menu toggle */}
+          <button
+            className="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Button
@@ -95,6 +108,16 @@ export const LandingPage = () => {
             </Button>
           </div>
         </div>
+
+        {/* Mobile dropdown panel */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-3 px-2 pb-2 flex flex-col gap-1 border-t border-slate-200/70 dark:border-white/10 pt-3">
+            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">Features</a>
+            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">How It Works</a>
+            <a href="#tech" onClick={() => setMobileMenuOpen(false)} className="px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">Architecture</a>
+            <a href="#stats" onClick={() => setMobileMenuOpen(false)} className="px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">Impact</a>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
