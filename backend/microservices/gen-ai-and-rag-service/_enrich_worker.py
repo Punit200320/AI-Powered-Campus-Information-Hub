@@ -26,6 +26,7 @@ CACHE_DIR = os.path.join(HERE, "_cache")
 CACHE = os.path.join(CACHE_DIR, "scraped_docs.json")
 
 _prev = {}
+_prev_src = {}
 try:
     if os.path.exists(CACHE):
         with io.open(CACHE, encoding="utf-8") as fh:
@@ -35,6 +36,8 @@ try:
                 s = e.get("source"); sm = e.get("summary")
                 if s and sm:
                     _prev[s] = sm
+                if s:
+                    _prev_src[s] = e.get("summarySource", "")
 except Exception:
     pass
 
@@ -62,6 +65,7 @@ try:
             "fileType": "PDF",
             "pages": m._pdf_page_count(data) if data else 1,
             "summary": prev if len(prev) > 80 else "",
+            "summarySource": _prev_src.get(fname, ""),
             "source": fname,
             "downloadPath": "/api/v1/scholarships/documents/{0}/download".format(base),
         }
