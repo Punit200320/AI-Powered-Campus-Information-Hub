@@ -693,6 +693,79 @@ async def list_scraped_documents():
     return ScrapedDocResponse(count=len(docs), documents=docs)
 
 
+@app.get("/api/v1/scholarships/documents/{doc_id}/summary")
+async def scraped_doc_structured_summary(doc_id: str):
+    """Structured aiSummary for a scraped document (eligibility, income cap,
+    financial benefits, deadlines, key takeaways, required documents).
+
+    Extracts facts with the LLM and caches the result per document so subsequent
+    requests are instant. Falls back to returning only the plain-text summary."""
+    docs = _load_scraped_doc_summaries()
+    doc = next(
+        (d for d in docs if str(d.get("id", "")) == doc_id
+         or str(d.get("source", "")).startswith(doc_id)),
+        None,
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    summary_text = str(doc.get("summary", "") or "").strip()
+
+    cache_dir = os.path.join(os.path.dirname(__file__), "_cache")
+    cache_f = os.path.join(cache_dir, "structured_summaries.json")
+    cache = {}
+    try:
+        if os.path.exists(cache_f):
+            with io.open(cache_f, encoding="utf-8") as fh:
+                cache = json.load(fh)
+    except Exception:
+        cache = {}
+
+    if isinstance(cache.get(doc_id), dict) and cache[doc_id].get("aiSummary"):
+        return cache[doc_id]
+
+    prompt = (
+        "You are an academic scholarship application assistant. Given the official "
+        "notice text below, extract structured facts into STRICT JSON with EXACTLY "
+        "these keys:\n"
+        '{"eligibility": string, "incomeCap": string, "financialBenefits": string, '
+        '"deadlines": string, "keyTakeaways": [string], "requiredDocuments": [string]}'
+        "\nUse concise factual phrases. Use \"Not specified in notice\" when a fact "
+        "is absent.\n\n"
+        f"NOTICE TEXT:\n{summary_text}"
+    )
+    raw = _call_llm(
+        [{"role": "user", "content": prompt}],
+        prompt,
+        temperature=0.2,
+        max_tokens=1200,
+    )
+    parsed = _parse_json_from_llm(raw) if raw else None
+    if not parsed or not isinstance(parsed, dict):
+        return {"markdown": summary_text, "summarySource": doc.get("summarySource", "ai"), "aiSummary": None}
+
+    result = {
+        "markdown": summary_text,
+        "summarySource": "ai",
+        "aiSummary": {
+            "eligibility": str(parsed.get("eligibility", "") or ""),
+            "incomeCap": str(parsed.get("incomeCap", "") or ""),
+            "financialBenefits": str(parsed.get("financialBenefits", "") or ""),
+            "deadlines": str(parsed.get("deadlines", "") or ""),
+            "keyTakeaways": parsed.get("keyTakeaways", []) if isinstance(parsed.get("keyTakeaways"), list) else [],
+            "requiredDocuments": parsed.get("requiredDocuments", []) if isinstance(parsed.get("requiredDocuments"), list) else [],
+        },
+    }
+    cache[doc_id] = result
+    try:
+        os.makedirs(cache_dir, exist_ok=True)
+        with io.open(cache_f, "w", encoding="utf-8") as fh:
+            json.dump(cache, fh, ensure_ascii=False, indent=1)
+    except Exception as exc:
+        print(f"[WARN] could not persist structured summaries: {exc}")
+    return result
+
+
 @app.get("/api/v1/scholarships/documents/{doc_id}/download")
 async def download_scraped_document(doc_id: str):
     if not os.path.isdir(_SCRAPED_DOCS_DIR):

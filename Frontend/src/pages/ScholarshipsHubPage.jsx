@@ -86,7 +86,18 @@ export const ScholarshipsHubPage = () => {
     try {
       // Scraped documents already carry an AI summary from the backend.
       if (doc && doc.summary) {
-        setDocSummary(doc.summary);
+        try {
+          const sres = await aiClient.get(
+            `/scholarships/documents/${encodeURIComponent(doc.id)}/summary`
+          );
+          if (sres.data && sres.data.aiSummary) {
+            setDocSummary(sres.data);
+          } else {
+            setDocSummary(doc.summary);
+          }
+        } catch {
+          setDocSummary(doc.summary);
+        }
       } else {
         const summaryData = await resourceService.getResourceSummary(doc.id);
         setDocSummary(summaryData);
