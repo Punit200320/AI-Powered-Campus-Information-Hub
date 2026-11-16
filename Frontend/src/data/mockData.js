@@ -251,6 +251,11 @@ export const MOCK_RESOURCES = [
     tags: ['MP DTE', 'B.E.', 'B.Tech', 'Rule Book', 'Counselling'],
     previewText: 'B.E./B.Tech Rule Book from the MP DTE online counselling portal. Official source: dte.mponline.gov.in',
     link: 'https://dte.mponline.gov.in/portal/services/onlinecounselling/counshomepage/home.aspx',
+    pdfUrl: '/docs/BE_RuleBook_2026.pdf',
+    summaryUrl: '/docs/BE_RuleBook_2026_summary.json',
+    summaryPdfUrl: '/docs/BE_RuleBook_2026_Summary.pdf',
+    fileSize: '1.3 MB',
+    pages: 58,
   },
   {
     id: 'res_counsel_02',

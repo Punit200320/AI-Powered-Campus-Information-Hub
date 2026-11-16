@@ -15,6 +15,7 @@ import {
   Shield,
   Layers,
   AlertCircle,
+  FileCheck,
   FileText,
   Download,
   Eye,
@@ -53,8 +54,18 @@ export const CounsellingHubPage = () => {
     setModalTab(initialTab);
     setIsSummaryLoading(true);
     try {
-      const summaryData = await resourceService.getResourceSummary(doc.id);
-      setDocSummary(summaryData);
+      if (doc.summaryUrl) {
+        const resp = await fetch(doc.summaryUrl);
+        if (resp.ok) {
+          const j = await resp.json();
+          setDocSummary(j);
+        } else {
+          setDocSummary(null);
+        }
+      } else {
+        const summaryData = await resourceService.getResourceSummary(doc.id);
+        setDocSummary(summaryData);
+      }
     } catch {
       setDocSummary(null);
     } finally {
@@ -167,6 +178,15 @@ export const CounsellingHubPage = () => {
   }, []);
 
   const handleDownload = (doc) => {
+    if (doc.pdfUrl) {
+      const a = document.createElement('a');
+      a.href = doc.pdfUrl;
+      a.download = doc.pdfUrl.split('/').pop();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
     if (doc.link) {
       window.open(doc.link, '_blank', 'noopener');
       return;
@@ -673,6 +693,23 @@ export const CounsellingHubPage = () => {
                             ))}
                           </ul>
                         </div>
+
+                        {previewDoc?.summaryUrl && docSummary?.summary && (
+                          <div className="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 space-y-3 shadow-sm">
+                            <h4 className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                              <BookOpen className="w-3.5 h-3.5" />
+                              <span>AI-Generated Summary (from official Rule Book PDF)</span>
+                            </h4>
+                            <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{docSummary.summary}</div>
+                            <button
+                              onClick={() => handleDownload({ ...previewDoc, pdfUrl: previewDoc.summaryPdfUrl })}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Download Summary as PDF</span>
+                            </button>
+                          </div>
+                        )}
 
                         {/* Eligibility & Merit Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
