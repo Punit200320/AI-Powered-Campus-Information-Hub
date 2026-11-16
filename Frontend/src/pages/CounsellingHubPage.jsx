@@ -161,6 +161,10 @@ export const CounsellingHubPage = () => {
   }, []);
 
   const handleDownload = (doc) => {
+    if (doc.link) {
+      window.open(doc.link, '_blank', 'noopener');
+      return;
+    }
     toast.success(`Downloading "${doc.title}" PDF directly to your device...`);
     const downloadUrl = `http://localhost:5000/api/resources/${doc.id}/download`;
     const link = document.createElement('a');
@@ -427,10 +431,10 @@ export const CounsellingHubPage = () => {
                         <button
                           onClick={() => handleDownload(doc)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors"
-                          title={`Download Full Official PDF (${doc.pages || 24} Pages)`}
+                          title={doc.link ? 'Open Official Source in new tab' : `Download Full Official PDF (${doc.pages || 24} Pages)`}
                         >
                           <Download className="w-3.5 h-3.5" />
-                          <span>Download PDF ({doc.pages || 24}P)</span>
+                          <span>{doc.link ? 'Open Official Source' : `Download PDF (${doc.pages || 24}P)`}</span>
                         </button>
                       </div>
                     </div>
@@ -446,11 +450,11 @@ export const CounsellingHubPage = () => {
                           <HardDrive className="w-3 h-3 text-indigo-500" />
                           <span>Campus Drive Sync</span>
                         </span>
-                        <span>{doc.fileSize || '11.4 MB'}</span>
-                        <span>{doc.pages || 68} pages</span>
+                        <span>{doc.fileSize || '—'}</span>
+                        <span>{doc.pages || '—'} pages</span>
                       </div>
                       <span className="font-medium text-indigo-600 dark:text-indigo-400">
-                        {doc.downloads || 420} downloads
+                        {doc.downloads ?? 0} downloads
                       </span>
                     </div>
                   </Card>
