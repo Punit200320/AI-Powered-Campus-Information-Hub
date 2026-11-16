@@ -31,6 +31,38 @@ import { NotificationSubscribeModal } from '../components/common/NotificationSub
 import { aiClient } from '../services/api';
 import { resourceService } from '../services/resourceService';
 import { fadeInUp, staggerContainer } from '../utils/animations';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+const mdComponents = {
+  p: ({ children }) => <p className="my-1.5">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc pl-5 my-1.5 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5 space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li className="ml-1">{children}</li>,
+  h1: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  h2: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  h3: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  h4: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  em: ({ children }) => <em>{children}</em>,
+  a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 underline break-words">{children}</a>,
+  code: ({ children }) => <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[12px]">{children}</code>,
+  table: ({ children }) => <table className="w-full text-xs border-collapse my-2">{children}</table>,
+  th: ({ children }) => <th className="border border-slate-200 dark:border-slate-700 px-2 py-1 text-left font-semibold">{children}</th>,
+  td: ({ children }) => <td className="border border-slate-200 dark:border-slate-700 px-2 py-1">{children}</td>,
+};
+
+const LOW_QUALITY_HINTS = [
+  "i'm sorry", "i can't understand", "not able to understand", "garbled",
+  "could not extract", "unable to extract", "could you please", "please share a clearer",
+  "not able to", "seems to be garbled", "doesn't appear"
+];
+const isGarbledSummary = (s) => {
+  const t = (s || '').toLowerCase();
+  if (LOW_QUALITY_HINTS.some((h) => t.includes(h))) return true;
+  if (t.length < 40 && !t.includes('://')) return true;
+  return false;
+};
 
 export const ScholarshipsHubPage = () => {
   const [scholarships, setScholarships] = useState([]);
@@ -727,30 +759,51 @@ export const ScholarshipsHubPage = () => {
                           </ul>
                         </div>
 
+                        {typeof docSummary === 'string' && docSummary.trim().length > 0 && (
+                          <div className="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 space-y-3 shadow-sm">
+                            <h4 className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>AI Summary (from scraped notice)</span>
+                            </h4>
+                            {isGarbledSummary(docSummary) ? (
+                              <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                                ⚠️ This notice appears to be a low-quality scan — the AI could not reliably read its full text.
+                                Please open the official PDF below for the exact eligibility, income and deadline details.
+                              </p>
+                            ) : (
+                              <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents} skipHtml={true} unwrapDisallowed={true}>
+                                  {docSummary}
+                                </ReactMarkdown>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Eligibility & Income Criteria Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">🎓 Eligibility Benchmark</span>
                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {docSummary?.aiSummary?.eligibility || 'Not specified in scraped document'}
+                              {docSummary?.aiSummary?.eligibility || 'See official notice below'}
                             </p>
                           </div>
                           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">💰 Family Income Limit</span>
                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {docSummary?.aiSummary?.incomeCap || 'Not specified in scraped document'}
+                              {docSummary?.aiSummary?.incomeCap || 'See official notice below'}
                             </p>
                           </div>
                           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">🏆 Financial Entitlement</span>
                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {docSummary?.aiSummary?.financialBenefits || 'Not specified in scraped document'}
+                              {docSummary?.aiSummary?.financialBenefits || 'See official notice below'}
                             </p>
                           </div>
                           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 space-y-1">
                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">⏳ Critical Timeline &amp; Deadline</span>
                             <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {docSummary?.aiSummary?.deadlines || 'Not specified in scraped document'}
+                              {docSummary?.aiSummary?.deadlines || 'See official notice below'}
                             </p>
                           </div>
                         </div>
