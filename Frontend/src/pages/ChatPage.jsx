@@ -385,7 +385,7 @@ I have indexed your university curriculum, syllabus notes, previous year exam pa
                       {isUser ? (
                         <p className="text-sm font-medium whitespace-pre-wrap">{msg.content}</p>
                       ) : (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents} skipHtml={true} unwrapDisallowed={true}>{msg.content}</ReactMarkdown>
                       )}
                     </div>
                   )}

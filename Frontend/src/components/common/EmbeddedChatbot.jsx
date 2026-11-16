@@ -225,7 +225,7 @@ export const EmbeddedChatbot = ({
                 }`}
               >
                 <div className="font-sans text-[13px] leading-relaxed">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents} skipHtml={true} unwrapDisallowed={true}>
                   {msg.content}
                 </ReactMarkdown>
               </div>
