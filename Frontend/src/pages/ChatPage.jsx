@@ -23,6 +23,27 @@ import { Card } from '../components/common/Card';
 import { chatService } from '../services/chatService';
 import { MOCK_CHAT_SUGGESTIONS } from '../data/mockData';
 import toast from 'react-hot-toast';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+const mdComponents = {
+  p: ({ children }) => <p className="my-1.5">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc pl-5 my-1.5 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5 space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li className="ml-1">{children}</li>,
+  h1: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  h2: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  h3: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  h4: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  em: ({ children }) => <em>{children}</em>,
+  a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 underline break-words">{children}</a>,
+  code: ({ children }) => <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[12px]">{children}</code>,
+  table: ({ children }) => <table className="w-full text-xs border-collapse my-2">{children}</table>,
+  thead: ({ children }) => <thead className="bg-slate-100 dark:bg-slate-800">{children}</thead>,
+  th: ({ children }) => <th className="border border-slate-200 dark:border-slate-700 px-2 py-1 text-left font-semibold">{children}</th>,
+  td: ({ children }) => <td className="border border-slate-200 dark:border-slate-700 px-2 py-1">{children}</td>,
+};
 
 export const ChatPage = () => {
   const [messages, setMessages] = useState([
@@ -364,7 +385,7 @@ I have indexed your university curriculum, syllabus notes, previous year exam pa
                       {isUser ? (
                         <p className="text-sm font-medium whitespace-pre-wrap">{msg.content}</p>
                       ) : (
-                        renderFormattedContent(msg.content)
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{msg.content}</ReactMarkdown>
                       )}
                     </div>
                   )}
