@@ -30,6 +30,7 @@ import { EmbeddedChatbot } from '../components/common/EmbeddedChatbot';
 import { NotificationSubscribeModal } from '../components/common/NotificationSubscribeModal';
 import { aiClient } from '../services/api';
 import { resourceService } from '../services/resourceService';
+import { MOCK_RESOURCES } from '../data/mockData';
 import { fadeInUp, staggerContainer } from '../utils/animations';
 
 export const CounsellingHubPage = () => {
@@ -140,18 +141,23 @@ export const CounsellingHubPage = () => {
     }
   };
 
-  // Load official admission rulebooks and brochures
+  // Load official admission rulebooks and brochures (real live-scraped preference)
   const fetchBrochures = async () => {
+    // Real scraped counselling list (official sources) used when backend returns none / only demos
+    const realCounselling = MOCK_RESOURCES.filter((d) => d.id && d.id.startsWith('res_counsel_'));
     try {
       const data = await resourceService.searchResources({ category: 'All' });
-      // Filter counselling related brochures and notices
+      // Drop fabricated demo placeholder rows still seeded in the backend DB
+      const demoIds = ['res_counsel_01', 'res_counsel_02', 'res_counsel_03', 'res_counsel_04'];
       const counselDocs = data.filter((d) =>
-        (d.id && d.id.startsWith('res_counsel_')) ||
-        (d.title && (d.title.includes('DTE') || d.title.includes('JoSAA') || d.title.includes('CSAB') || d.title.includes('Counselling') || d.title.includes('Rulebook')))
+        ((d.id && d.id.startsWith('res_counsel_')) ||
+          (d.title && (d.title.includes('DTE') || d.title.includes('JoSAA') || d.title.includes('CSAB') || d.title.includes('Counselling') || d.title.includes('Rulebook')))) &&
+        !(d.id && demoIds.includes(d.id))
       );
-      setBrochures(counselDocs);
+      setBrochures(counselDocs.length > 0 ? counselDocs : realCounselling);
     } catch (err) {
-      console.warn('Failed to load brochures from resource service:', err);
+      console.warn('Failed to load brochures from resource service; using real scraped list:', err);
+      setBrochures(realCounselling);
     }
   };
 
