@@ -33,6 +33,26 @@ import { aiClient } from '../services/api';
 import { resourceService } from '../services/resourceService';
 import { MOCK_RESOURCES } from '../data/mockData';
 import { fadeInUp, staggerContainer } from '../utils/animations';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+const mdComponents = {
+  p: ({ children }) => <p className="my-1.5">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc pl-5 my-1.5 space-y-0.5">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 my-1.5 space-y-0.5">{children}</ol>,
+  li: ({ children }) => <li className="ml-1">{children}</li>,
+  h1: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  h2: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  h3: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  h4: ({ children }) => <h4 className="font-bold text-sm mt-2 mb-1">{children}</h4>,
+  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  em: ({ children }) => <em>{children}</em>,
+  a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 underline break-words">{children}</a>,
+  code: ({ children }) => <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[12px]">{children}</code>,
+  table: ({ children }) => <table className="w-full text-xs border-collapse my-2">{children}</table>,
+  th: ({ children }) => <th className="border border-slate-200 dark:border-slate-700 px-2 py-1 text-left font-semibold">{children}</th>,
+  td: ({ children }) => <td className="border border-slate-200 dark:border-slate-700 px-2 py-1">{children}</td>,
+};
 
 export const CounsellingHubPage = () => {
   const [counsellingList, setCounsellingList] = useState([]);
@@ -700,7 +720,11 @@ export const CounsellingHubPage = () => {
                               <BookOpen className="w-3.5 h-3.5" />
                               <span>AI-Generated Summary (from official Rule Book PDF)</span>
                             </h4>
-                            <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{docSummary.summary}</div>
+                            <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents} skipHtml={true} unwrapDisallowed={true}>
+                                      {docSummary.summary}
+                                    </ReactMarkdown>
+                                  </div>
                             <button
                               onClick={() => handleDownload({ ...previewDoc, pdfUrl: previewDoc.summaryPdfUrl })}
                               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors"
