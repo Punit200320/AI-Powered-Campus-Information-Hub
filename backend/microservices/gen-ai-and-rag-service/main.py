@@ -722,15 +722,18 @@ async def scraped_doc_structured_summary(doc_id: str):
         cache = {}
 
     if isinstance(cache.get(doc_id), dict) and cache[doc_id].get("aiSummary"):
-        return cache[doc_id]
+        cached = cache[doc_id]
+        if not cached.get("title") or not str(cached.get("title", "")).strip():
+            cached["title"] = str(doc.get("title", "") or "").strip()
+        return cached
 
     prompt = (
         "You are an academic scholarship application assistant. Given the official "
         "notice text below, extract structured facts into STRICT JSON with EXACTLY "
         "these keys:\n"
         '{"eligibility": string, "incomeCap": string, "financialBenefits": string, '
-        '"deadlines": string, "keyTakeaways": [string], "requiredDocuments": [string]}'
-        "\nUse concise factual phrases. Use \"Not specified in notice\" when a fact "
+        '"deadlines": string, "title": string, "keyTakeaways": [string], "requiredDocuments": [string]}'
+        "\nUse concise factual phrases. For \"title\", write a SHORT, human-readable notice headline (max 10 words, no quotes, no trailing period). Use concise factual phrases for the other fields. Use \"Not specified in notice\" when a fact "
         "is absent.\n\n"
         f"NOTICE TEXT:\n{summary_text}"
     )
@@ -744,8 +747,11 @@ async def scraped_doc_structured_summary(doc_id: str):
     if not parsed or not isinstance(parsed, dict):
         return {"markdown": summary_text, "summarySource": doc.get("summarySource", "ai"), "aiSummary": None}
 
+    _raw_title = str(parsed.get("title", "") or "").strip()
+    nice_title = _raw_title if _raw_title else str(doc.get("title", ""))
     result = {
         "markdown": summary_text,
+        "title": nice_title,
         "summarySource": "ai",
         "aiSummary": {
             "eligibility": str(parsed.get("eligibility", "") or ""),

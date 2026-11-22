@@ -75,12 +75,14 @@ export const ScholarshipsHubPage = () => {
   const [previewDoc, setPreviewDoc] = useState(null);
   const [modalTab, setModalTab] = useState('summary'); // 'summary' | 'full'
   const [docSummary, setDocSummary] = useState(null);
+  const [previewTitle, setPreviewTitle] = useState(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
   const [subscribeTarget, setSubscribeTarget] = useState({ title: 'Campus Scholarships', type: 'scholarship' });
 
   const openPreview = async (doc, initialTab = 'summary') => {
     setPreviewDoc(doc);
+    setPreviewTitle(null);
     setModalTab(initialTab);
     setIsSummaryLoading(true);
     try {
@@ -92,8 +94,12 @@ export const ScholarshipsHubPage = () => {
           );
           if (sres.data && sres.data.aiSummary) {
             setDocSummary(sres.data);
+            if (sres.data.title) {
+              setPreviewTitle(sres.data.title);
+            }
           } else {
             setDocSummary(doc.summary);
+            if (doc.title) setPreviewTitle(doc.title);
           }
         } catch {
           setDocSummary(doc.summary);
@@ -689,7 +695,7 @@ export const ScholarshipsHubPage = () => {
                     </span>
                   </div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                    {previewDoc.title}
+                    {previewTitle || previewDoc.title}
                   </h2>
                   <p className="text-xs text-slate-500">
                     Authority: {previewDoc.facultyName || 'Higher Education Department'}
