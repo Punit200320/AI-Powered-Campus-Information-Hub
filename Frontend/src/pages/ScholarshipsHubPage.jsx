@@ -215,7 +215,7 @@ export const ScholarshipsHubPage = () => {
             fileSize: 'PDF',
             pages: d.pages || 1,
             downloads: 0,
-            facultyName: 'Scraped ' + (d.category || 'Scholarship Document'),
+            facultyName: (d.category || 'Official Scholarship Notice / Brochure').replace('Scraped ', ''),
             previewText: d.summary || '',
             source: 'scraped',
             downloadPath: d.downloadPath,

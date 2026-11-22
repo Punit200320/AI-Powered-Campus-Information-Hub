@@ -690,7 +690,95 @@ class ScrapedDocResponse(BaseModel):
 @app.get("/api/v1/scholarships/documents", response_model=ScrapedDocResponse)
 async def list_scraped_documents():
     docs = _load_scraped_doc_summaries()
+    # Enrich each doc with the LLM-generated clean title (if already cached by
+    # the summary endpoint) so cards/list show a human-readable headline.
+    try:
+        _cf = os.path.join(os.path.dirname(__file__), "_cache", "structured_summaries.json")
+        _cs = {}
+        if os.path.exists(_cf):
+            with io.open(_cf, encoding="utf-8") as fh:
+                _cs = json.load(fh)
+        _tf = os.path.join(os.path.dirname(__file__), "_cache", "doc_titles.json")
+        _tl = {}
+        try:
+            if os.path.exists(_tf):
+                with io.open(_tf, encoding="utf-8") as fh:
+                    _tl = json.load(fh)
+        except Exception:
+            _tl = {}
+        for d in docs:
+            did = str(d.get("id", ""))
+            if _tl.get(did):
+                d["title"] = str(_tl[did])
+            else:
+                cached = _cs.get(did)
+                if isinstance(cached, dict) and cached.get("title"):
+                    d["title"] = str(cached.get("title"))
+                elif d.get("title"):
+                    d["title"] = str(d["title"]).replace("_", " ").strip()
+    except Exception:
+        pass
     return ScrapedDocResponse(count=len(docs), documents=docs)
+
+
+@app.get("/api/v1/scholarships/documents/{doc_id}/title")
+async def scraped_doc_quick_title(doc_id: str):
+    """Fast, cheap LLM-generated clean title for a scraped document.
+
+    Uses a short prompt (few tokens) and caches the result so the list/card
+    view can show a human-readable headline without running the full summary."""
+    docs = _load_scraped_doc_summaries()
+    doc = next(
+        (d for d in docs if str(d.get("id", "")) == doc_id
+         or str(d.get("source", "")).startswith(doc_id)),
+        None,
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    _tc_dir = os.path.join(os.path.dirname(__file__), "_cache")
+    _tc_f = os.path.join(_tc_dir, "doc_titles.json")
+    _tc = {}
+    try:
+        if os.path.exists(_tc_f):
+            with io.open(_tc_f, encoding="utf-8") as fh:
+                _tc = json.load(fh)
+    except Exception:
+        _tc = {}
+    if _tc.get(doc_id):
+        return {"id": doc_id, "title": _tc[doc_id]}
+
+    summary_text = str(doc.get("summary", "") or "").strip()
+    prompt = (
+        "You are an academic scholarship assistant. Given the official notice text below, "
+        'write a SHORT, human-readable notice headline (max 10 words, no quotes, no trailing '
+        'period). Reply with ONLY the headline.\n\nNOTICE TEXT:\n' + summary_text[:2200]
+    )
+    title = ""
+    try:
+        raw = _call_llm(
+            [{"role": "user", "content": prompt}],
+            prompt,
+            temperature=0.2,
+            max_tokens=40,
+        )
+        if raw:
+            title = str(raw).strip().strip('"').strip()
+            # strip any leading label like "Title:"
+            if ":" in title[:20]:
+                title = title.split(":", 1)[1].strip()
+    except Exception:
+        title = ""
+    if not title:
+        title = str(doc.get("title", "") or "").replace("_", " ").strip()
+    _tc[doc_id] = title
+    try:
+        os.makedirs(_tc_dir, exist_ok=True)
+        with io.open(_tc_f, "w", encoding="utf-8") as fh:
+            json.dump(_tc, fh, ensure_ascii=False, indent=1)
+    except Exception as exc:
+        print(f"[WARN] could not persist doc titles: {exc}")
+    return {"id": doc_id, "title": title}
 
 
 @app.get("/api/v1/scholarships/documents/{doc_id}/summary")
