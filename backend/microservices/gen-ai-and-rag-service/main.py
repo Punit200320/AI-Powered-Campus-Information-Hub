@@ -821,8 +821,19 @@ async def scraped_doc_structured_summary(doc_id: str):
         "these keys:\n"
         '{"eligibility": string, "incomeCap": string, "financialBenefits": string, '
         '"deadlines": string, "title": string, "keyTakeaways": [string], "requiredDocuments": [string]}'
-        "\nUse concise factual phrases. For \"title\", write a SHORT, human-readable notice headline (max 10 words, no quotes, no trailing period). Use concise factual phrases for the other fields. Use \"Not specified in notice\" when a fact "
-        "is absent.\n\n"
+        '\nRules:\n'
+        '- "eligibility": state the WHO-can-apply criteria (education/degree, marks/percentage, '
+        'age, category/domicile, income). List each distinct criterion separated by "; ". '
+        'If explicit criteria are absent but the notice clearly implies them (e.g. a teacher '
+        'recruitment post => required degree + B.Ed + age), summarise the implied criteria. '
+        'Only write "Not specified in notice" when nothing at all can be inferred.\n'
+        '- "incomeCap": family income ceiling, or "Not specified in notice".\n'
+        '- "financialBenefits": amount/salary/benefits.\n'
+        '- "deadlines": dates/expiry.\n'
+        '- "keyTakeaways": 3-6 most important facts.\n'
+        '- "requiredDocuments": list of documents to bring.\n'
+        '- "title": SHORT human-readable headline (max 10 words, no quotes, no period).\n'
+        '- Keep every value concise and factual.\n\n'
         f"NOTICE TEXT:\n{summary_text}"
     )
     raw = _call_llm(
@@ -837,12 +848,24 @@ async def scraped_doc_structured_summary(doc_id: str):
 
     _raw_title = str(parsed.get("title", "") or "").strip()
     nice_title = _raw_title if _raw_title else str(doc.get("title", ""))
+    _elig = str(parsed.get("eligibility", "") or "").strip()
+    if not _elig or _elig.lower() in ("not specified in notice", "not specified", "n/a", "na"):
+        _tk = parsed.get("keyTakeaways", [])
+        _tk = _tk if isinstance(_tk, list) else []
+        _cands = [t for t in _tk if any(
+            k in t.lower() for k in
+            ("eligib", "criteria", "candidate", "degree", "graduation", "b.ed", "b.ed",
+             "marks", "%", "percentage", "age", "income", "category", "domicile",
+             "sc", "st", "obc", "class", "qualification", "must", "require")
+        )]
+        if _cands:
+            _elig = "; ".join(_cands[:2])
     result = {
         "markdown": summary_text,
         "title": nice_title,
         "summarySource": "ai",
         "aiSummary": {
-            "eligibility": str(parsed.get("eligibility", "") or ""),
+            "eligibility": _elig,
             "incomeCap": str(parsed.get("incomeCap", "") or ""),
             "financialBenefits": str(parsed.get("financialBenefits", "") or ""),
             "deadlines": str(parsed.get("deadlines", "") or ""),
